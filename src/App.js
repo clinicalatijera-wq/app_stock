@@ -122,7 +122,6 @@ const App = () => {
   
   const [historialPrecios, setHistorialPrecios] = useState({});
   const [editandoMasivo, setEditandoMasivo] = useState(null);
-  const [nuevosPreciosMasivo, setNuevosPreciosMasivo] = useState({});
   
   const [ajusteInventario, setAjusteInventario] = useState({
     varianteId: '',
@@ -340,34 +339,6 @@ const App = () => {
       
       setNuevaVariante({ productoId: '', color: '', sku: '', precioSinIva: '', stock: '', imagen: null });
       cargarProductos();
-    } catch (error) {
-      alert('Error: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const actualizarPrecio = async (varianteId, precioSinIva, productoId) => {
-    setLoading(true);
-    try {
-      await fetchWordPress(
-        `/products/${productoId}/variations/${varianteId}`,
-        'PUT',
-        { price: precioSinIva }
-      );
-      
-      const nuevoHistorial = { ...historialPrecios };
-      if (!nuevoHistorial[varianteId]) nuevoHistorial[varianteId] = [];
-      nuevoHistorial[varianteId].push({
-        fecha: new Date().toLocaleString(),
-        precioAnterior: productos.find(p => p.variantes.find(v => v.id === varianteId))?.variantes.find(v => v.id === varianteId)?.precioSinIva,
-        precioNuevo: precioSinIva,
-      });
-      setHistorialPrecios(nuevoHistorial);
-      localStorage.setItem('historialPrecios', JSON.stringify(nuevoHistorial));
-      
-      cargarProductos();
-      alert('✅ Precio actualizado');
     } catch (error) {
       alert('Error: ' + error.message);
     } finally {
