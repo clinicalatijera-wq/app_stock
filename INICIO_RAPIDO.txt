@@ -1,0 +1,51 @@
+═══════════════════════════════════════════════════════════════════
+          LA TIJERA - GESTIÓN DE INVENTARIO PRO v2.0
+═══════════════════════════════════════════════════════════════════
+
+✅ INICIO RÁPIDO - 3 PASOS
+
+PASO 1: Abre CMD en la carpeta la-tijera-app-completa y ejecuta:
+─────────────────────────────────────────────────────────────────
+npm install
+
+(ESPERA 2-3 MINUTOS a que instale todas las dependencias)
+
+
+PASO 2: Cuando termine, ejecuta:
+─────────────────────────────────────────────────────────────────
+npm start
+
+(Se abrirá automáticamente http://localhost:3000)
+
+
+PASO 3: Entra con la contraseña:
+─────────────────────────────────────────────────────────────────
+latijera2026
+
+
+═══════════════════════════════════════════════════════════════════
+🎉 ¡LISTO! Tu app está funcionando y es COLORIDA.
+═══════════════════════════════════════════════════════════════════
+
+📌 PARA DESPLEGAR EN VERCEL:
+
+1. Sube la carpeta a GitHub
+2. Ve a https://vercel.com
+3. Importa tu repositorio
+4. Click en "Deploy"
+5. ¡LISTO! Tu app estará en internet
+
+
+📌 CARACTERÍSTICAS:
+
+✓ Dashboard con métricas
+✓ Productos expandibles
+✓ Alertas de stock crítico
+✓ Exportar CSV
+✓ Interfaz colorida y bonita
+✓ Funciona en cualquier navegador
+
+
+═══════════════════════════════════════════════════════════════════
+¡Disfruta usando La Tijera! 📦
+═══════════════════════════════════════════════════════════════════
