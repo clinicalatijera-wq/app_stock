@@ -18,11 +18,11 @@ Aplicación React para gestionar inventario de lanas y telas con alertas de stoc
 
 ### Pasos
 
-1. **Descargar la carpeta completa** desde GitHub o descargar como ZIP
+1. **Descargar o clonar el repositorio**
 
 2. **Navegar a la carpeta del proyecto:**
 ```bash
-cd la-tijera-app-completa
+cd la-tijera-app-final
 ```
 
 3. **Instalar dependencias:**
@@ -51,10 +51,11 @@ Esto crea la carpeta `build/` lista para desplegar.
 
 1. Sube el proyecto a GitHub
 2. Ve a https://vercel.com
-3. Importa el repositorio
-4. Vercel detecta que es un proyecto React
-5. Click en "Deploy"
-6. ¡Listo! Tu app estará en línea en minutos
+3. Click en "Add New" → "Project"
+4. Importa tu repositorio de GitHub
+5. Vercel detecta automáticamente que es un proyecto React
+6. Click en "Deploy"
+7. ¡Listo! Tu app estará en línea en minutos
 
 ## 🔐 Contraseña
 
@@ -63,7 +64,7 @@ La contraseña de acceso es: **`latijera2026`**
 ## 📋 Estructura de Carpetas
 
 ```
-la-tijera-app-completa/
+la-tijera-app-final/
 ├── src/
 │   ├── App.js          # Componente principal
 │   ├── App.css         # Estilos del app
@@ -73,8 +74,8 @@ la-tijera-app-completa/
 │   └── index.html      # HTML base
 ├── package.json        # Dependencias
 ├── .gitignore          # Archivos a ignorar en Git
+├── vercel.json         # Configuración para Vercel
 └── README.md           # Este archivo
-
 ```
 
 ## 🛠️ Tecnologías

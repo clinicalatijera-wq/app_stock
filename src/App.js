@@ -1,6 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import './App.css';
 
+const productosInicial = [
+  { id: 1, nombre: 'Lana Merino', variantes: [
+      { sku: 'LM-BEIGE-01', color: 'beige', stock: 45, precio: 25000 },
+      { sku: 'LM-BLANCO-01', color: 'blanco', stock: 32, precio: 25000 },
+      { sku: 'LM-NEGRO-01', color: 'negro', stock: 18, precio: 25000 },
+    ]
+  },
+  { id: 2, nombre: 'Algodón Premium', variantes: [
+      { sku: 'AP-ROJO-01', color: 'rojo', stock: 8, precio: 15000 },
+      { sku: 'AP-AZUL-01', color: 'azul', stock: 22, precio: 15000 },
+    ]
+  },
+  { id: 3, nombre: 'Tela Poliéster', variantes: [
+      { sku: 'TP-VERDE-01', color: 'verde', stock: 3, precio: 12000 },
+      { sku: 'TP-GRIS-01', color: 'gris', stock: 55, precio: 12000 },
+    ]
+  },
+];
+
 const App = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [password, setPassword] = useState('');
@@ -9,32 +28,15 @@ const App = () => {
   const [expandedProduct, setExpandedProduct] = useState(null);
   const [showPassword, setShowPassword] = useState(false);
 
-  const productosInicial = [
-    { id: 1, nombre: 'Lana Merino', variantes: [
-        { sku: 'LM-BEIGE-01', color: 'beige', stock: 45, precio: 25000 },
-        { sku: 'LM-BLANCO-01', color: 'blanco', stock: 32, precio: 25000 },
-        { sku: 'LM-NEGRO-01', color: 'negro', stock: 18, precio: 25000 },
-      ]
-    },
-    { id: 2, nombre: 'Algodón Premium', variantes: [
-        { sku: 'AP-ROJO-01', color: 'rojo', stock: 8, precio: 15000 },
-        { sku: 'AP-AZUL-01', color: 'azul', stock: 22, precio: 15000 },
-      ]
-    },
-    { id: 3, nombre: 'Tela Poliéster', variantes: [
-        { sku: 'TP-VERDE-01', color: 'verde', stock: 3, precio: 12000 },
-        { sku: 'TP-GRIS-01', color: 'gris', stock: 55, precio: 12000 },
-      ]
-    },
-  ];
-
   const COLORES = {
     beige: '#F5E6D3', blanco: '#FFFFFF', negro: '#000000', rojo: '#DC143C',
     azul: '#0066CC', verde: '#228B22', gris: '#808080', rosado: '#FF69B4',
     naranja: '#FF8C00', amarillo: '#FFD700', marron: '#8B4513', purpura: '#800080',
   };
 
-  useEffect(() => { setProductos(productosInicial); }, []);
+  useEffect(() => { 
+    setProductos(productosInicial); 
+  }, []);
 
   const handleLogin = (e) => {
     e.preventDefault();
