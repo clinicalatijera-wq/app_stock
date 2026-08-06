@@ -27,23 +27,23 @@ const fetchWordPress = async (endpoint) => {
   }
 };
 
-// Función para hacer fetch a Lioren
-const fetchLioren = async (endpoint) => {
-  try {
-    const response = await fetch(`${LIOREN_URL}${endpoint}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${LIOREN_TOKEN}`,
-        'Content-Type': 'application/json',
-      },
-    });
-    if (!response.ok) throw new Error(`Error ${response.status}`);
-    return await response.json();
-  } catch (error) {
-    console.error('Error fetching Lioren:', error);
-    return null;
-  }
-};
+// Función para hacer fetch a Lioren (para futuras integraciones)
+// const fetchLioren = async (endpoint) => {
+//   try {
+//     const response = await fetch(`${LIOREN_URL}${endpoint}`, {
+//       method: 'GET',
+//       headers: {
+//         'Authorization': `Bearer ${LIOREN_TOKEN}`,
+//         'Content-Type': 'application/json',
+//       },
+//     });
+//     if (!response.ok) throw new Error(`Error ${response.status}`);
+//     return await response.json();
+//   } catch (error) {
+//     console.error('Error fetching Lioren:', error);
+//     return null;
+//   }
+// };
 
 // Función para procesar productos de WordPress
 const procesarProductosWordPress = async (productosWP, stocksLioren) => {
