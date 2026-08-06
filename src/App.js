@@ -155,6 +155,18 @@ const App = () => {
     'sin color': '#CCCCCC',
   };
 
+  const getStockColor = (stock) => {
+    if (stock < 5) return '#EF4444';
+    if (stock < 20) return '#FBBF24';
+    return '#10B981';
+  };
+
+  const getStockStatus = (stock) => {
+    if (stock < 5) return '⚠️ CRÍTICO';
+    if (stock < 20) return '⚡ BAJO';
+    return '✓ OK';
+  };
+
   const aplicarFiltros = useCallback(() => {
     let filtrados = productos;
     
@@ -252,7 +264,7 @@ const App = () => {
         ],
       };
       
-      const nuevoProdWP = await fetchWordPress('/products', 'POST', productoData);
+      await fetchWordPress('/products', 'POST', productoData);
       
       const precioConIva = Math.round(parseFloat(nuevoProducto.precioSinIva) * 1.19 * 100) / 100;
       const productoLioren = {
@@ -439,18 +451,6 @@ const App = () => {
   };
 
   const handleLogout = () => { setIsLoggedIn(false); setPassword(''); };
-
-  const getStockColor = (stock) => {
-    if (stock < 5) return '#EF4444';
-    if (stock < 20) return '#FBBF24';
-    return '#10B981';
-  };
-
-  const getStockStatus = (stock) => {
-    if (stock < 5) return '⚠️ CRÍTICO';
-    if (stock < 20) return '⚡ BAJO';
-    return '✓ OK';
-  };
 
   const totalStock = productos.reduce((sum, p) => sum + p.variantes.reduce((s, v) => s + v.stock, 0), 0);
   const totalVariantes = productos.reduce((sum, p) => sum + p.variantes.length, 0);
