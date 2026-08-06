@@ -113,7 +113,6 @@ const App = () => {
   const [productos, setProductos] = useState([]);
   const [productosFiltrados, setProductosFiltrados] = useState([]);
   const [expandedProduct, setExpandedProduct] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   
   const [busqueda, setBusqueda] = useState('');
@@ -155,17 +154,7 @@ const App = () => {
     'sin color': '#CCCCCC',
   };
 
-  const getStockColor = (stock) => {
-    if (stock < 5) return '#EF4444';
-    if (stock < 20) return '#FBBF24';
-    return '#10B981';
-  };
 
-  const getStockStatus = (stock) => {
-    if (stock < 5) return '⚠️ CRÍTICO';
-    if (stock < 20) return '⚡ BAJO';
-    return '✓ OK';
-  };
 
   const aplicarFiltros = useCallback(() => {
     let filtrados = productos;
@@ -361,8 +350,6 @@ const App = () => {
   const actualizarPrecio = async (varianteId, precioSinIva, productoId) => {
     setLoading(true);
     try {
-      const precioConIva = Math.round(precioSinIva * 1.19 * 100) / 100;
-      
       await fetchWordPress(
         `/products/${productoId}/variations/${varianteId}`,
         'PUT',
@@ -381,24 +368,6 @@ const App = () => {
       
       cargarProductos();
       alert('✅ Precio actualizado');
-    } catch (error) {
-      alert('Error: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const actualizarPreciosMasivo = async (productoId) => {
-    setLoading(true);
-    try {
-      const producto = productos.find(p => p.id === productoId);
-      for (const variante of producto.variantes) {
-        const nuevoPrecio = parseFloat(nuevosPreciosMasivo[variante.id]) || variante.precioSinIva;
-        await actualizarPrecio(variante.id, nuevoPrecio, productoId);
-      }
-      setEditandoMasivo(null);
-      setNuevosPreciosMasivo({});
-      alert('✅ Precios actualizados masivamente');
     } catch (error) {
       alert('Error: ' + error.message);
     } finally {
@@ -467,7 +436,7 @@ const App = () => {
           </div>
           <form onSubmit={handleLogin} style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
             <input
-              type={showPassword ? 'text' : 'password'}
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
