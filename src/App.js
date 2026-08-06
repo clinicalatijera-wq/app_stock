@@ -5,8 +5,8 @@ import './App.css';
 const WP_URL = 'https://latijera.cl';
 const WP_CONSUMER_KEY = 'ck_00ab7fccc2078bf5b48b4d68d02e4da048702542';
 const WP_CONSUMER_SECRET = 'cs_7e2ff15307605193e03af7230930dcdca7eef889';
-const LIOREN_URL = 'https://www.lioren.cl/api';
-const LIOREN_TOKEN = '6e88c7f5c4ff6b9fba88a58a72d467d539a37288e4c697ac2a587a1a3b5480bd061cca1d0975deab';
+// const LIOREN_URL = 'https://www.lioren.cl/api'; // Para futuras integraciones
+// const LIOREN_TOKEN = '6e88c7f5c4ff6b9fba88a58a72d467d539a37288e4c697ac2a587a1a3b5480bd061cca1d0975deab'; // Para futuras integraciones
 
 // Función para hacer fetch autenticado a WordPress
 const fetchWordPress = async (endpoint) => {
