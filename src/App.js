@@ -300,7 +300,7 @@ const App = () => {
   const sincronizarDesdeLiboren = async () => {
     setLoading(true);
     try {
-      const productosLiboren = await fetchLiboren('/productos');
+      const productosLiboren = await fetchLioren('/productos');
       if (!productosLiboren || productosLiboren.length === 0) {
         alert('No hay productos en Lioren');
         return;
@@ -414,6 +414,34 @@ const App = () => {
       alert('✅ Foto actualizada en WordPress!');
       setEditandoProducto(null);
       setProductoEditar({ id: '', nombre: '', descripcion: '', imagen: null });
+      cargarProductos();
+    } catch (error) {
+      alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const actualizarPrecio = async (varianteId, precioSinIva, productoId) => {
+    setLoading(true);
+    try {
+      const precioConIva = Math.round(precioSinIva * 1.19 * 100) / 100;
+      
+      await fetchWordPress(`/products/${productoId}/variations/${varianteId}`, 'PUT', {
+        regular_price: precioSinIva,
+      });
+
+      // Intentar actualizar en Lioren (opcional)
+      try {
+        await fetchLioren(`/productos/${varianteId}`, 'PUT', {
+          precio_neto: precioSinIva,
+          precio_bruto: precioConIva,
+        });
+      } catch (err) {
+        console.log('No se pudo actualizar en Lioren, pero WP sí fue actualizado');
+      }
+
+      alert('✅ Precio actualizado en WordPress!');
       cargarProductos();
     } catch (error) {
       alert('Error: ' + error.message);
