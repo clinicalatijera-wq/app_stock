@@ -51,22 +51,61 @@ const fetchLioren = async (endpoint, method = 'GET', body = null) => {
 };
 
 const subirImagenWordPress = async (file) => {
-  const formData = new FormData();
-  formData.append('file', file);
-  const auth = btoa(`${WP_CONSUMER_KEY}:${WP_CONSUMER_SECRET}`);
-  try {
-    const response = await fetch(`${WP_URL}/wp-json/wp/v2/media`, {
-      method: 'POST',
-      headers: { 'Authorization': `Basic ${auth}` },
-      body: formData,
-      mode: 'cors',
-    });
-    if (!response.ok) throw new Error('Error subiendo imagen');
-    const data = await response.json();
-    return data.id;
-  } catch (error) {
-    throw error;
+  if (!file) return null; // Imagen opcional
+  
+  // Validar que sea imagen
+  const formatosPermitidos = ['image/png', 'image/jpeg', 'image/jpg', 'image/gif', 'image/webp'];
+  if (!formatosPermitidos.includes(file.type)) {
+    throw new Error(`❌ Formato no permitido. Usa: PNG, JPG, GIF, WEBP`);
   }
+  
+  // Validar tamaño (máx 10MB)
+  const maxSize = 10 * 1024 * 1024; // 10MB
+  if (file.size > maxSize) {
+    throw new Error(`❌ Archivo muy grande. Máximo 10MB (tu archivo: ${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+  }
+
+  // Validar dimensiones (mínimo 300x300)
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = async () => {
+      if (img.width < 300 || img.height < 300) {
+        reject(new Error(`❌ Imagen muy pequeña. Mínimo 300x300px (tu imagen: ${img.width}x${img.height}px)`));
+        return;
+      }
+      
+      // Proceder con upload
+      const formData = new FormData();
+      formData.append('file', file);
+      const auth = btoa(`${WP_CONSUMER_KEY}:${WP_CONSUMER_SECRET}`);
+      
+      try {
+        const response = await fetch(`${WP_URL}/wp-json/wp/v2/media`, {
+          method: 'POST',
+          headers: { 'Authorization': `Basic ${auth}` },
+          body: formData,
+          mode: 'cors',
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.message || `Error subiendo imagen: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        resolve(data.id);
+      } catch (error) {
+        console.error('Error subiendo imagen:', error);
+        reject(error);
+      }
+    };
+    
+    img.onerror = () => {
+      reject(new Error('❌ No se pudo cargar la imagen. Verifica que sea un archivo válido'));
+    };
+    
+    img.src = URL.createObjectURL(file);
+  });
 };
 
 const procesarProductosWordPress = async (productosWP) => {
@@ -146,6 +185,14 @@ const App = () => {
     imagen: null,
   });
 
+  const [editandoProducto, setEditandoProducto] = useState(null);
+  const [productoEditar, setProductoEditar] = useState({
+    id: '',
+    nombre: '',
+    descripcion: '',
+    imagen: null,
+  });
+
   const COLORES = {
     beige: '#F5E6D3', blanco: '#FFFFFF', negro: '#000000', rojo: '#DC143C',
     azul: '#0066CC', verde: '#228B22', gris: '#808080', rosado: '#FF69B4',
@@ -210,7 +257,166 @@ const App = () => {
       const hist = localStorage.getItem('historialPrecios');
       if (hist) setHistorialPrecios(JSON.parse(hist));
     } catch (error) {
-      alert('Error cargando productos: ' + error.message);
+      console.log('No se pudo conectar a APIs. Usando datos de demostración.');
+      
+      // Datos de demostración
+      const productosDemo = [
+        {
+          id: 1,
+          nombre: 'Lana Merino Premium',
+          descripcion: 'Lana merino de alta calidad',
+          variantes: [
+            { id: 1, sku: 'LM-ROJO', color: 'Rojo', precioSinIva: 50, precioConIva: 59.50, stock: 25 },
+            { id: 2, sku: 'LM-AZUL', color: 'Azul', precioSinIva: 50, precioConIva: 59.50, stock: 8 },
+            { id: 3, sku: 'LM-NEGRO', color: 'Negro', precioSinIva: 50, precioConIva: 59.50, stock: 3 },
+          ]
+        },
+        {
+          id: 2,
+          nombre: 'Tela Algodón Natural',
+          descripcion: 'Tela 100% algodón',
+          variantes: [
+            { id: 4, sku: 'TA-BLANCO', color: 'Blanco', precioSinIva: 30, precioConIva: 35.70, stock: 50 },
+            { id: 5, sku: 'TA-BEIGE', color: 'Beige', precioSinIva: 30, precioConIva: 35.70, stock: 15 },
+          ]
+        },
+        {
+          id: 3,
+          nombre: 'Hilo de Seda',
+          descripcion: 'Hilo premium para bordado',
+          variantes: [
+            { id: 6, sku: 'HS-VERDE', color: 'Verde', precioSinIva: 15, precioConIva: 17.85, stock: 100 },
+            { id: 7, sku: 'HS-NARANJA', color: 'Naranja', precioSinIva: 15, precioConIva: 17.85, stock: 2 },
+          ]
+        },
+      ];
+      
+      setProductos(productosDemo);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sincronizarDesdeLiboren = async () => {
+    setLoading(true);
+    try {
+      const productosLiboren = await fetchLiboren('/productos');
+      if (!productosLiboren || productosLiboren.length === 0) {
+        alert('No hay productos en Lioren');
+        return;
+      }
+
+      // Agrupar por tipo de producto (remover último elemento del nombre que es el color)
+      const grupos = {};
+      
+      productosLiboren.forEach(prod => {
+        // Extraer nombre y color
+        const partes = prod.nombre.split(' ');
+        const color = partes[partes.length - 1]; // Último elemento es el color
+        const tipoProducto = partes.slice(0, -1).join(' '); // Todo menos el color
+        
+        if (!grupos[tipoProducto]) {
+          grupos[tipoProducto] = [];
+        }
+        
+        grupos[tipoProducto].push({
+          codigo: prod.codigo,
+          nombre: prod.nombre,
+          tipoProducto: tipoProducto,
+          color: color,
+          precioNeto: prod.precio_neto,
+          precioBruto: prod.precio_bruto,
+          stock: prod.stock || 0,
+        });
+      });
+
+      let contadorNuevos = 0;
+      let contadorVariantes = 0;
+
+      // Crear productos y variantes
+      for (const [tipoProducto, variantes] of Object.entries(grupos)) {
+        try {
+          const productoWP = {
+            name: tipoProducto,
+            type: 'variable',
+            sku: `LIO-${Date.now()}`,
+            description: `Importado desde Lioren - ${variantes.length} variantes`,
+            attributes: [
+              {
+                id: 0,
+                name: 'Color',
+                position: 0,
+                visible: true,
+                variation: true,
+                options: variantes.map(v => v.color),
+              },
+            ],
+          };
+
+          const productoCreado = await fetchWordPress('/products', 'POST', productoWP);
+          contadorNuevos++;
+
+          // Crear variantes
+          for (const variante of variantes) {
+            try {
+              const varianteWP = {
+                sku: variante.codigo,
+                regular_price: Math.round(variante.precioNeto * 100) / 100,
+                stock_quantity: variante.stock,
+                attributes: [
+                  {
+                    id: 0,
+                    name: 'Color',
+                    option: variante.color,
+                  },
+                ],
+              };
+
+              await fetchWordPress(
+                `/products/${productoCreado.id}/variations`,
+                'POST',
+                varianteWP
+              );
+              contadorVariantes++;
+            } catch (error) {
+              console.log(`Variante ${variante.color} no se pudo crear:`, error.message);
+            }
+          }
+        } catch (error) {
+          console.log(`Producto ${tipoProducto} no se pudo crear:`, error.message);
+        }
+      }
+
+      alert(`✅ Sincronización exitosa!\n${contadorNuevos} productos\n${contadorVariantes} variantes`);
+      cargarProductos();
+    } catch (error) {
+      alert('Error en sincronización: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const actualizarFotoProducto = async (e) => {
+    e.preventDefault();
+    if (!editandoProducto || !productoEditar.imagen) {
+      alert('Selecciona una imagen');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const imagenId = await subirImagenWordPress(productoEditar.imagen);
+      
+      await fetchWordPress(`/products/${editandoProducto}`, 'PUT', {
+        images: [{ id: imagenId }],
+      });
+
+      alert('✅ Foto actualizada en WordPress!');
+      setEditandoProducto(null);
+      setProductoEditar({ id: '', nombre: '', descripcion: '', imagen: null });
+      cargarProductos();
+    } catch (error) {
+      alert('Error: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -233,12 +439,16 @@ const App = () => {
         imagenId = await subirImagenWordPress(nuevoProducto.imagen);
       }
       
+      // Usuario ingresa precio CON IVA, calculamos SIN IVA
+      const precioConIva = parseFloat(nuevoProducto.precioSinIva);
+      const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
+      
       const productoData = {
         name: nuevoProducto.nombre,
         description: nuevoProducto.descripcion,
         type: 'variable',
         sku: nuevoProducto.sku || `PRD-${Date.now()}`,
-        regular_price: nuevoProducto.precioSinIva,
+        regular_price: precioSinIva,
         images: imagenId ? [{ id: imagenId }] : [],
         attributes: [
           {
@@ -254,12 +464,11 @@ const App = () => {
       
       await fetchWordPress('/products', 'POST', productoData);
       
-      const precioConIva = Math.round(parseFloat(nuevoProducto.precioSinIva) * 1.19 * 100) / 100;
       const productoLioren = {
         codigo: nuevoProducto.sku || `PRD-${Date.now()}`,
         nombre: nuevoProducto.nombre,
         descripcion: nuevoProducto.descripcion,
-        precio_neto: parseFloat(nuevoProducto.precioSinIva),
+        precio_neto: precioSinIva,
         precio_bruto: precioConIva,
         unidad: 'Unidad [ud]',
         fraccionable: false,
@@ -299,9 +508,13 @@ const App = () => {
         imagenId = await subirImagenWordPress(nuevaVariante.imagen);
       }
       
+      // Usuario ingresa precio CON IVA, calculamos SIN IVA
+      const precioConIva = parseFloat(nuevaVariante.precioSinIva);
+      const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
+      
       const varianteData = {
         sku: nuevaVariante.sku,
-        regular_price: nuevaVariante.precioSinIva,
+        regular_price: precioSinIva,
         stock_quantity: parseInt(nuevaVariante.stock) || 0,
         attributes: [
           {
@@ -319,11 +532,10 @@ const App = () => {
         varianteData
       );
 
-      const precioConIva = Math.round(parseFloat(nuevaVariante.precioSinIva) * 1.19 * 100) / 100;
       const varianteLioren = {
         codigo: nuevaVariante.sku,
         nombre: `${productos.find(p => p.id === parseInt(nuevaVariante.productoId))?.nombre} - ${nuevaVariante.color}`,
-        precio_neto: parseFloat(nuevaVariante.precioSinIva),
+        precio_neto: precioSinIva,
         precio_bruto: precioConIva,
         unidad: 'Unidad [ud]',
         fraccionable: false,
@@ -447,6 +659,7 @@ const App = () => {
             { tab: 'dashboard', icon: '📊', label: 'Dashboard' },
             { tab: 'productos', icon: '📦', label: 'Productos' },
             { tab: 'crear-producto', icon: '➕', label: 'Crear' },
+            { tab: 'editar-producto', icon: '✏️', label: 'Editar' },
             { tab: 'crear-variante', icon: '🎨', label: 'Variante' },
             { tab: 'precios', icon: '💰', label: 'Precios' },
             { tab: 'inventario', icon: '📊', label: 'Inventario' },
@@ -484,6 +697,26 @@ const App = () => {
                 <p style={{fontSize: '2rem', fontWeight: 'bold', marginTop: '0.5rem', margin: '0.5rem 0 0 0'}}>{productos.length}</p>
               </div>
             </div>
+            <button
+              onClick={sincronizarDesdeLiboren}
+              disabled={loading}
+              style={{
+                background: 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)',
+                color: 'white',
+                padding: '1rem 2rem',
+                borderRadius: '0.5rem',
+                border: 'none',
+                fontSize: '1rem',
+                fontWeight: 'bold',
+                cursor: loading ? 'not-allowed' : 'pointer',
+                opacity: loading ? 0.6 : 1,
+                boxShadow: '0 10px 15px rgba(0,0,0,0.1)',
+                transition: 'all 0.3s',
+                maxWidth: '300px'
+              }}
+            >
+              {loading ? '⏳ Sincronizando...' : '🔄 Sincronizar desde Lioren'}
+            </button>
           </div>
         )}
 
@@ -607,14 +840,34 @@ const App = () => {
                 onChange={(e) => setNuevoProducto({...nuevoProducto, descripcion: e.target.value})}
                 style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', minHeight: '80px', fontFamily: 'inherit'}}
               />
-              <input
-                type="number"
-                placeholder="Precio sin IVA *"
-                value={nuevoProducto.precioSinIva}
-                onChange={(e) => setNuevoProducto({...nuevoProducto, precioSinIva: e.target.value})}
-                style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
-                step="0.01"
-              />
+              <div style={{display: 'flex', gap: '1rem'}}>
+                <div style={{flex: 1}}>
+                  <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio SIN IVA</label>
+                  <input
+                    type="number"
+                    placeholder="$0.00"
+                    value={nuevoProducto.precioSinIva}
+                    onChange={(e) => {
+                      const sinIva = parseFloat(e.target.value) || 0;
+                      setNuevoProducto({...nuevoProducto, precioSinIva: e.target.value});
+                    }}
+                    style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                    step="0.01"
+                  />
+                  <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Ingresa este valor</small>
+                </div>
+                <div style={{flex: 1}}>
+                  <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio CON IVA (19%)</label>
+                  <input
+                    type="number"
+                    placeholder="$0.00"
+                    value={nuevoProducto.precioSinIva ? (Math.round(parseFloat(nuevoProducto.precioSinIva) * 1.19 * 100) / 100).toFixed(2) : ''}
+                    disabled
+                    style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #eee', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', background: '#f9f9f9', color: '#666', cursor: 'not-allowed'}}
+                  />
+                  <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Se calcula automáticamente</small>
+                </div>
+              </div>
               <input
                 type="text"
                 placeholder="SKU"
@@ -622,12 +875,25 @@ const App = () => {
                 onChange={(e) => setNuevoProducto({...nuevoProducto, sku: e.target.value})}
                 style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
               />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setNuevoProducto({...nuevoProducto, imagen: e.target.files?.[0] || null})}
-                style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
-              />
+              <div style={{background: '#f0f9ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '1rem', marginBottom: '0.5rem'}}>
+                <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#1e40af', display: 'block', marginBottom: '0.5rem'}}>📸 Foto del Producto (Opcional)</label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  onChange={(e) => setNuevoProducto({...nuevoProducto, imagen: e.target.files?.[0] || null})}
+                  style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #bfdbfe', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                />
+                <small style={{color: '#1e40af', fontSize: '0.75rem', marginTop: '0.5rem', display: 'block', fontWeight: 'bold'}}>✅ Recomendado para WordPress:</small>
+                <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Tamaño: Mínimo 300x300px (recomendado 1000x1000px+)</small>
+                <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Formato: PNG, JPG, GIF, WEBP</small>
+                <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Peso máximo: 10MB</small>
+                <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Proporción: Cuadrado (1:1) es lo mejor</small>
+                {nuevoProducto.imagen && (
+                  <small style={{color: '#059669', fontSize: '0.75rem', marginTop: '0.5rem', display: 'block', fontWeight: 'bold'}}>
+                    ✓ Archivo seleccionado: {nuevoProducto.imagen.name}
+                  </small>
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={loading}
@@ -676,14 +942,31 @@ const App = () => {
                 onChange={(e) => setNuevaVariante({...nuevaVariante, sku: e.target.value})}
                 style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
               />
-              <input
-                type="number"
-                placeholder="Precio sin IVA *"
-                value={nuevaVariante.precioSinIva}
-                onChange={(e) => setNuevaVariante({...nuevaVariante, precioSinIva: e.target.value})}
-                style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
-                step="0.01"
-              />
+              <div style={{display: 'flex', gap: '1rem'}}>
+                <div style={{flex: 1}}>
+                  <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio SIN IVA</label>
+                  <input
+                    type="number"
+                    placeholder="$0.00"
+                    value={nuevaVariante.precioSinIva}
+                    onChange={(e) => setNuevaVariante({...nuevaVariante, precioSinIva: e.target.value})}
+                    style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                    step="0.01"
+                  />
+                  <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Ingresa este valor</small>
+                </div>
+                <div style={{flex: 1}}>
+                  <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio CON IVA (19%)</label>
+                  <input
+                    type="number"
+                    placeholder="$0.00"
+                    value={nuevaVariante.precioSinIva ? (Math.round(parseFloat(nuevaVariante.precioSinIva) * 1.19 * 100) / 100).toFixed(2) : ''}
+                    disabled
+                    style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #eee', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', background: '#f9f9f9', color: '#666', cursor: 'not-allowed'}}
+                  />
+                  <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Se calcula automáticamente</small>
+                </div>
+              </div>
               <input
                 type="number"
                 placeholder="Stock"
@@ -691,12 +974,25 @@ const App = () => {
                 onChange={(e) => setNuevaVariante({...nuevaVariante, stock: e.target.value})}
                 style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
               />
-              <input
-                type="file"
-                accept="image/*"
-                onChange={(e) => setNuevaVariante({...nuevaVariante, imagen: e.target.files?.[0] || null})}
-                style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
-              />
+              <div style={{background: '#f0f9ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '1rem', marginBottom: '0.5rem'}}>
+                <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#1e40af', display: 'block', marginBottom: '0.5rem'}}>📸 Foto de la Variante (Opcional)</label>
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                  onChange={(e) => setNuevaVariante({...nuevaVariante, imagen: e.target.files?.[0] || null})}
+                  style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #bfdbfe', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                />
+                <small style={{color: '#1e40af', fontSize: '0.75rem', marginTop: '0.5rem', display: 'block', fontWeight: 'bold'}}>✅ Recomendado para WordPress:</small>
+                <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Tamaño: Mínimo 300x300px (recomendado 1000x1000px+)</small>
+                <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Formato: PNG, JPG, GIF, WEBP</small>
+                <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Peso máximo: 10MB</small>
+                <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Proporción: Cuadrado (1:1) es lo mejor</small>
+                {nuevaVariante.imagen && (
+                  <small style={{color: '#059669', fontSize: '0.75rem', marginTop: '0.5rem', display: 'block', fontWeight: 'bold'}}>
+                    ✓ Archivo seleccionado: {nuevaVariante.imagen.name}
+                  </small>
+                )}
+              </div>
               <button
                 type="submit"
                 disabled={loading}
@@ -708,18 +1004,151 @@ const App = () => {
           </div>
         )}
 
+        {activeTab === 'editar-producto' && (
+          <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem', maxWidth: '1000px'}}>
+            <div style={{background: 'white', borderRadius: '0.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', padding: '2rem'}}>
+              <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem', margin: 0}}>✏️ Seleccionar Producto</h2>
+              <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
+                <select
+                  value={editandoProducto || ''}
+                  onChange={(e) => {
+                    const prodId = e.target.value;
+                    if (prodId) {
+                      const prod = productos.find(p => p.id === parseInt(prodId));
+                      if (prod) {
+                        setEditandoProducto(parseInt(prodId));
+                        setProductoEditar({
+                          id: prod.id,
+                          nombre: prod.nombre,
+                          descripcion: prod.descripcion,
+                          imagen: null,
+                        });
+                      }
+                    }
+                  }}
+                  style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                >
+                  <option value="">-- Selecciona un producto --</option>
+                  {productos.map(p => (
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                  ))}
+                </select>
+
+                {editandoProducto && (
+                  <>
+                    <div style={{padding: '1rem', background: '#f0f9ff', borderRadius: '0.5rem', borderLeft: '4px solid #3b82f6'}}>
+                      <p style={{margin: '0 0 0.5rem 0', fontSize: '0.875rem', color: '#666'}}>Producto seleccionado:</p>
+                      <p style={{margin: 0, fontWeight: 'bold', fontSize: '1rem'}}>{productoEditar.nombre}</p>
+                      {productoEditar.descripcion && (
+                        <p style={{margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#666'}}>{productoEditar.descripcion}</p>
+                      )}
+                    </div>
+
+                    <div style={{background: '#f0f9ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '1rem'}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#1e40af', display: 'block', marginBottom: '0.5rem'}}>📸 Nueva Foto (Opcional)</label>
+                      <input
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/gif,image/webp"
+                        onChange={(e) => setProductoEditar({...productoEditar, imagen: e.target.files?.[0] || null})}
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #bfdbfe', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                      />
+                      <small style={{color: '#1e40af', fontSize: '0.75rem', marginTop: '0.5rem', display: 'block', fontWeight: 'bold'}}>✅ Recomendado:</small>
+                      <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Tamaño: Mínimo 300x300px (recomendado 1000x1000px+)</small>
+                      <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Formato: PNG, JPG, GIF, WEBP</small>
+                      <small style={{color: '#3b82f6', fontSize: '0.75rem', display: 'block'}}>• Peso máximo: 10MB</small>
+                      {productoEditar.imagen && (
+                        <small style={{color: '#059669', fontSize: '0.75rem', marginTop: '0.5rem', display: 'block', fontWeight: 'bold'}}>
+                          ✓ Archivo: {productoEditar.imagen.name}
+                        </small>
+                      )}
+                    </div>
+
+                    <button
+                      onClick={actualizarFotoProducto}
+                      disabled={loading || !productoEditar.imagen}
+                      style={{background: '#3b82f6', color: 'white', padding: '0.75rem 1rem', borderRadius: '0.5rem', fontWeight: 'bold', border: 'none', cursor: !productoEditar.imagen || loading ? 'not-allowed' : 'pointer', fontSize: '1rem', opacity: !productoEditar.imagen || loading ? 0.6 : 1}}
+                    >
+                      {loading ? '⏳ Guardando...' : '💾 Actualizar Foto'}
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div style={{background: '#fef3c7', border: '2px solid #f59e0b', borderRadius: '0.5rem', padding: '1.5rem'}}>
+              <h3 style={{margin: 0, marginBottom: '1rem', color: '#92400e', fontSize: '1rem', fontWeight: 'bold'}}>ℹ️ Instrucciones</h3>
+              <ul style={{margin: 0, paddingLeft: '1.5rem', fontSize: '0.875rem', color: '#92400e', lineHeight: '1.6'}}>
+                <li>Selecciona un producto de la lista</li>
+                <li>Carga una nueva imagen (opcional)</li>
+                <li>Presiona "Actualizar Foto"</li>
+                <li>La imagen se sincronizará con WordPress</li>
+              </ul>
+              <div style={{marginTop: '1rem', padding: '1rem', background: 'rgba(255,255,255,0.5)', borderRadius: '0.5rem', fontSize: '0.75rem', color: '#92400e'}}>
+                <p style={{margin: 0, fontWeight: 'bold', marginBottom: '0.5rem'}}>📐 Tamaño de Imagen:</p>
+                <p style={{margin: 0}}>Para que WordPress muestre bien tu imagen en la tienda online, necesita:</p>
+                <p style={{margin: '0.5rem 0 0 0', fontFamily: 'monospace'}}>Mínimo: 300 x 300 px<br/>Ideal: 1000 x 1000 px o más</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {activeTab === 'precios' && (
-          <div style={{display: 'flex', flexDirection: 'column', gap: '1rem'}}>
-            <h2 style={{fontSize: '1.25rem', fontWeight: 'bold'}}>💰 Precios</h2>
+          <div style={{background: 'white', borderRadius: '0.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', padding: '2rem'}}>
+            <h2 style={{fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1.5rem'}}>💰 Editar Precios</h2>
             {productosFiltrados.map(p => (
-              <div key={p.id} style={{background: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)'}}>
-                <h3 style={{margin: 0, marginBottom: '1rem', fontSize: '1rem'}}>{p.nombre}</h3>
-                {p.variantes.map(v => (
-                  <div key={v.id} style={{display: 'flex', gap: '1rem', marginBottom: '0.5rem', alignItems: 'center', fontSize: '0.875rem'}}>
-                    <span style={{minWidth: '100px'}}>{v.color}</span>
-                    <span>${v.precioSinIva} / ${v.precioConIva}</span>
-                  </div>
-                ))}
+              <div key={p.id} style={{marginBottom: '2rem', borderBottom: '1px solid #eee', paddingBottom: '1.5rem'}}>
+                <h3 style={{margin: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: 'bold'}}>{p.nombre}</h3>
+                <div style={{display: 'grid', gap: '1rem'}}>
+                  {p.variantes.map(v => (
+                    <div key={v.id} style={{display: 'grid', gridTemplateColumns: '150px 1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', background: '#f9f9f9', borderRadius: '0.5rem'}}>
+                      <span style={{fontWeight: 'bold', fontSize: '0.875rem'}}>{v.color}</span>
+                      <div>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SIN IVA</small>
+                        <input
+                          type="number"
+                          value={v.precioSinIva}
+                          onChange={(e) => {
+                            const nuevosProd = productos.map(prod => 
+                              prod.id === p.id 
+                                ? {
+                                    ...prod,
+                                    variantes: prod.variantes.map(var_ =>
+                                      var_.id === v.id 
+                                        ? {...var_, precioSinIva: parseFloat(e.target.value) || 0}
+                                        : var_
+                                    )
+                                  }
+                                : prod
+                            );
+                            setProductos(nuevosProd);
+                          }}
+                          style={{width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '0.25rem', fontSize: '0.875rem'}}
+                          step="0.01"
+                        />
+                      </div>
+                      <div>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>CON IVA (19%)</small>
+                        <input
+                          type="number"
+                          value={(Math.round(v.precioSinIva * 1.19 * 100) / 100).toFixed(2)}
+                          disabled
+                          style={{width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '0.25rem', fontSize: '0.875rem', background: '#f0f0f0', cursor: 'not-allowed'}}
+                        />
+                      </div>
+                      <div>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SKU</small>
+                        <span style={{fontSize: '0.75rem', fontFamily: 'monospace'}}>{v.sku}</span>
+                      </div>
+                      <button
+                        onClick={() => actualizarPrecio(v.id, v.precioSinIva, p.id)}
+                        disabled={loading}
+                        style={{background: '#3b82f6', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.25rem', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.75rem', fontWeight: 'bold', opacity: loading ? 0.6 : 1}}
+                      >
+                        {loading ? '⏳' : '💾'}
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             ))}
           </div>
