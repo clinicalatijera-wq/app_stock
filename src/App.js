@@ -176,6 +176,8 @@ const App = () => {
     imagen: null,
   });
 
+  const [tipoPrecionProducto, setTipoPrecionProducto] = useState('sinIva'); // 'sinIva' o 'conIva'
+
   const [nuevaVariante, setNuevaVariante] = useState({
     productoId: '',
     color: '',
@@ -184,6 +186,8 @@ const App = () => {
     stock: '',
     imagen: null,
   });
+
+  const [tipoPrecionVariante, setTipoPrecionVariante] = useState('sinIva'); // 'sinIva' o 'conIva'
 
   const [editandoProducto, setEditandoProducto] = useState(null);
   const [productoEditar, setProductoEditar] = useState({
@@ -319,13 +323,18 @@ const App = () => {
           grupos[tipoProducto] = [];
         }
         
+        // El precio_bruto de Lioren es el PRECIO CON IVA
+        // Calculamos el SIN IVA dividiendo entre 1.19
+        const precioConIva = prod.precio_bruto;
+        const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
+        
         grupos[tipoProducto].push({
           codigo: prod.codigo,
           nombre: prod.nombre,
           tipoProducto: tipoProducto,
           color: color,
-          precioNeto: prod.precio_neto,
-          precioBruto: prod.precio_bruto,
+          precioNeto: precioSinIva,  // SIN IVA (calculado)
+          precioBruto: precioConIva,  // CON IVA (del precio_bruto)
           stock: prod.stock || 0,
         });
       });
@@ -868,32 +877,86 @@ const App = () => {
                 onChange={(e) => setNuevoProducto({...nuevoProducto, descripcion: e.target.value})}
                 style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', minHeight: '80px', fontFamily: 'inherit'}}
               />
+              <div style={{background: '#f0f9ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '1rem', marginBottom: '0.5rem'}}>
+                <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#1e40af', display: 'block', marginBottom: '0.75rem'}}>💰 ¿Cuál precio tienes?</label>
+                <div style={{display: 'flex', gap: '1.5rem'}}>
+                  <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem'}}>
+                    <input
+                      type="radio"
+                      value="sinIva"
+                      checked={tipoPrecionProducto === 'sinIva'}
+                      onChange={(e) => setTipoPrecionProducto(e.target.value)}
+                      style={{cursor: 'pointer'}}
+                    />
+                    <span>Tengo el SIN IVA</span>
+                  </label>
+                  <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem'}}>
+                    <input
+                      type="radio"
+                      value="conIva"
+                      checked={tipoPrecionProducto === 'conIva'}
+                      onChange={(e) => setTipoPrecionProducto(e.target.value)}
+                      style={{cursor: 'pointer'}}
+                    />
+                    <span>Tengo el CON IVA</span>
+                  </label>
+                </div>
+              </div>
+
               <div style={{display: 'flex', gap: '1rem'}}>
-                <div style={{flex: 1}}>
-                  <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio SIN IVA</label>
-                  <input
-                    type="number"
-                    placeholder="$0.00"
-                    value={nuevoProducto.precioSinIva}
-                    onChange={(e) => {
-                      setNuevoProducto({...nuevoProducto, precioSinIva: e.target.value});
-                    }}
-                    style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
-                    step="0.01"
-                  />
-                  <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Ingresa este valor</small>
-                </div>
-                <div style={{flex: 1}}>
-                  <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio CON IVA (19%)</label>
-                  <input
-                    type="number"
-                    placeholder="$0.00"
-                    value={nuevoProducto.precioSinIva ? (Math.round(parseFloat(nuevoProducto.precioSinIva) * 1.19 * 100) / 100).toFixed(2) : ''}
-                    disabled
-                    style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #eee', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', background: '#f9f9f9', color: '#666', cursor: 'not-allowed'}}
-                  />
-                  <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Se calcula automáticamente</small>
-                </div>
+                {tipoPrecionProducto === 'sinIva' ? (
+                  <>
+                    <div style={{flex: 1}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio SIN IVA *</label>
+                      <input
+                        type="number"
+                        placeholder="$0.00"
+                        value={nuevoProducto.precioSinIva}
+                        onChange={(e) => setNuevoProducto({...nuevoProducto, precioSinIva: e.target.value})}
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #3b82f6', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                        step="0.01"
+                      />
+                      <small style={{color: '#3b82f6', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: 'bold'}}>👈 Ingresa este valor</small>
+                    </div>
+                    <div style={{flex: 1}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio CON IVA (19%)</label>
+                      <input
+                        type="number"
+                        placeholder="$0.00"
+                        value={nuevoProducto.precioSinIva ? (Math.round(parseFloat(nuevoProducto.precioSinIva) * 1.19 * 100) / 100).toFixed(2) : ''}
+                        disabled
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #eee', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', background: '#f9f9f9', color: '#666', cursor: 'not-allowed'}}
+                      />
+                      <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Se calcula automáticamente</small>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{flex: 1}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio SIN IVA</label>
+                      <input
+                        type="number"
+                        placeholder="$0.00"
+                        value={nuevoProducto.precioSinIva ? (Math.round(parseFloat(nuevoProducto.precioSinIva) / 1.19 * 100) / 100).toFixed(2) : ''}
+                        disabled
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #eee', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', background: '#f9f9f9', color: '#666', cursor: 'not-allowed'}}
+                      />
+                      <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Se calcula automáticamente</small>
+                    </div>
+                    <div style={{flex: 1}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio CON IVA (19%) *</label>
+                      <input
+                        type="number"
+                        placeholder="$0.00"
+                        value={nuevoProducto.precioSinIva}
+                        onChange={(e) => setNuevoProducto({...nuevoProducto, precioSinIva: e.target.value})}
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #3b82f6', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                        step="0.01"
+                      />
+                      <small style={{color: '#3b82f6', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: 'bold'}}>👈 Ingresa este valor</small>
+                    </div>
+                  </>
+                )}
               </div>
               <input
                 type="text"
@@ -969,30 +1032,86 @@ const App = () => {
                 onChange={(e) => setNuevaVariante({...nuevaVariante, sku: e.target.value})}
                 style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
               />
+              <div style={{background: '#f0f9ff', border: '1px solid #bfdbfe', borderRadius: '0.5rem', padding: '1rem', marginBottom: '0.5rem'}}>
+                <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#1e40af', display: 'block', marginBottom: '0.75rem'}}>💰 ¿Cuál precio tienes?</label>
+                <div style={{display: 'flex', gap: '1.5rem'}}>
+                  <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem'}}>
+                    <input
+                      type="radio"
+                      value="sinIva"
+                      checked={tipoPrecionVariante === 'sinIva'}
+                      onChange={(e) => setTipoPrecionVariante(e.target.value)}
+                      style={{cursor: 'pointer'}}
+                    />
+                    <span>Tengo el SIN IVA</span>
+                  </label>
+                  <label style={{display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem'}}>
+                    <input
+                      type="radio"
+                      value="conIva"
+                      checked={tipoPrecionVariante === 'conIva'}
+                      onChange={(e) => setTipoPrecionVariante(e.target.value)}
+                      style={{cursor: 'pointer'}}
+                    />
+                    <span>Tengo el CON IVA</span>
+                  </label>
+                </div>
+              </div>
+
               <div style={{display: 'flex', gap: '1rem'}}>
-                <div style={{flex: 1}}>
-                  <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio SIN IVA</label>
-                  <input
-                    type="number"
-                    placeholder="$0.00"
-                    value={nuevaVariante.precioSinIva}
-                    onChange={(e) => setNuevaVariante({...nuevaVariante, precioSinIva: e.target.value})}
-                    style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
-                    step="0.01"
-                  />
-                  <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Ingresa este valor</small>
-                </div>
-                <div style={{flex: 1}}>
-                  <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio CON IVA (19%)</label>
-                  <input
-                    type="number"
-                    placeholder="$0.00"
-                    value={nuevaVariante.precioSinIva ? (Math.round(parseFloat(nuevaVariante.precioSinIva) * 1.19 * 100) / 100).toFixed(2) : ''}
-                    disabled
-                    style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #eee', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', background: '#f9f9f9', color: '#666', cursor: 'not-allowed'}}
-                  />
-                  <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Se calcula automáticamente</small>
-                </div>
+                {tipoPrecionVariante === 'sinIva' ? (
+                  <>
+                    <div style={{flex: 1}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio SIN IVA *</label>
+                      <input
+                        type="number"
+                        placeholder="$0.00"
+                        value={nuevaVariante.precioSinIva}
+                        onChange={(e) => setNuevaVariante({...nuevaVariante, precioSinIva: e.target.value})}
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #3b82f6', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                        step="0.01"
+                      />
+                      <small style={{color: '#3b82f6', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: 'bold'}}>👈 Ingresa este valor</small>
+                    </div>
+                    <div style={{flex: 1}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio CON IVA (19%)</label>
+                      <input
+                        type="number"
+                        placeholder="$0.00"
+                        value={nuevaVariante.precioSinIva ? (Math.round(parseFloat(nuevaVariante.precioSinIva) * 1.19 * 100) / 100).toFixed(2) : ''}
+                        disabled
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #eee', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', background: '#f9f9f9', color: '#666', cursor: 'not-allowed'}}
+                      />
+                      <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Se calcula automáticamente</small>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{flex: 1}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio SIN IVA</label>
+                      <input
+                        type="number"
+                        placeholder="$0.00"
+                        value={nuevaVariante.precioSinIva ? (Math.round(parseFloat(nuevaVariante.precioSinIva) / 1.19 * 100) / 100).toFixed(2) : ''}
+                        disabled
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #eee', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box', background: '#f9f9f9', color: '#666', cursor: 'not-allowed'}}
+                      />
+                      <small style={{color: '#999', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block'}}>Se calcula automáticamente</small>
+                    </div>
+                    <div style={{flex: 1}}>
+                      <label style={{fontSize: '0.875rem', fontWeight: 'bold', color: '#666', display: 'block', marginBottom: '0.5rem'}}>Precio CON IVA (19%) *</label>
+                      <input
+                        type="number"
+                        placeholder="$0.00"
+                        value={nuevaVariante.precioSinIva}
+                        onChange={(e) => setNuevaVariante({...nuevaVariante, precioSinIva: e.target.value})}
+                        style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #3b82f6', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
+                        step="0.01"
+                      />
+                      <small style={{color: '#3b82f6', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block', fontWeight: 'bold'}}>👈 Ingresa este valor</small>
+                    </div>
+                  </>
+                )}
               </div>
               <input
                 type="number"
