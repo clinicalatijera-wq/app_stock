@@ -876,7 +876,6 @@ const App = () => {
                     placeholder="$0.00"
                     value={nuevoProducto.precioSinIva}
                     onChange={(e) => {
-                      const sinIva = parseFloat(e.target.value) || 0;
                       setNuevoProducto({...nuevoProducto, precioSinIva: e.target.value});
                     }}
                     style={{width: '100%', padding: '0.75rem 1rem', border: '2px solid #ccc', borderRadius: '0.5rem', fontSize: '1rem', boxSizing: 'border-box'}}
