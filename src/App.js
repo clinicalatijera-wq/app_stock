@@ -304,7 +304,7 @@ const App = () => {
   const sincronizarDesdeLiboren = async () => {
     setLoading(true);
     try {
-      const productosLiboren = await fetchLioren('/productos');
+      const productosLiboren = await fetchLioren('/api/lioren/productos');
       if (!productosLiboren || productosLiboren.length === 0) {
         alert('No hay productos en Lioren');
         return;
@@ -442,7 +442,7 @@ const App = () => {
 
       // Intentar actualizar en Lioren (opcional)
       try {
-        await fetchLioren(`/productos/${varianteId}`, 'PUT', {
+        await fetchLioren(`/api/lioren/productos/${varianteId}`, 'PUT', {
           precio_neto: precioSinIva,
           precio_bruto: precioConIva,
         });
@@ -512,7 +512,7 @@ const App = () => {
       };
       
       try {
-        await fetchLioren('/productos', 'POST', productoLioren);
+        await fetchLioren('/api/lioren/productos', 'POST', productoLioren)
       } catch (lioreError) {
         console.log('Nota: Producto creado en WordPress');
       }
@@ -579,7 +579,7 @@ const App = () => {
       };
       
       try {
-        await fetchLioren('/productos', 'POST', varianteLioren);
+        await fetchLioren('/api/lioren/productos', 'POST', varianteLioren)
       } catch (lioreError) {
         console.log('Nota: Variante creada en WordPress');
       }
