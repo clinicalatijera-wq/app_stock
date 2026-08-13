@@ -331,25 +331,35 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extraer nombre base removiendo códigos y números finales
+        // Extraer nombre base removiendo códigos y colores
         let tipoProducto = prod.nombre.trim();
         
-        // Remover código entre paréntesis: (COD.XXXXX) o (CODIGO)
+        // Remover código entre paréntesis: (COD.XXXXX)
         tipoProducto = tipoProducto.replace(/\s*\([^)]*\)\s*$/g, '').trim();
         
-        // Remover números/códigos al final: "NOMBRE 1102" -> "NOMBRE"
-        tipoProducto = tipoProducto.replace(/\s+\d+(\.\d+)?$/g, '').trim();
+        // Remover código con barra: "NOMBRE 3602/03" -> "NOMBRE"
+        tipoProducto = tipoProducto.replace(/\s+\d+\/\d+\s*/g, ' ').trim();
         
-        // Remover color si está al final (asumir que el último elemento podría ser color)
-        const partes = tipoProducto.split(' ');
-        if (partes.length > 2) {
-          // Si tiene más de 2 palabras, verificar si la última parece ser un color
-          // (palabras cortas o en minúscula inicial)
-          const ultimaPalabra = partes[partes.length - 1];
-          if (ultimaPalabra.length <= 10 && ultimaPalabra !== ultimaPalabra.toUpperCase()) {
-            tipoProducto = partes.slice(0, -1).join(' ').trim();
+        // Remover cualquier número al final
+        tipoProducto = tipoProducto.replace(/\s+\d+(\.\d+)?\s*$/g, '').trim();
+        
+        // Remover colores al final (palabras simples en mayúscula que no son el producto)
+        const palabras = tipoProducto.split(' ');
+        
+        // Si tiene más de 3 palabras, probablemente las últimas sean colores
+        // Mantener solo las primeras palabras "importantes"
+        if (palabras.length > 3) {
+          // Asumir que las primeras 2-3 palabras son el producto base
+          // y el resto son colores/atributos
+          const baseProducto = palabras.slice(0, 3).join(' ');
+          // Verificar si la palabra #4 parece un color (nombres de colores comunes)
+          const coloresComunes = ['ROJO', 'BLANCO', 'NEGRO', 'AZUL', 'VERDE', 'AMARILLO', 'GRIS', 'CAFE', 'LILA', 'NARANJA', 'ROSA', 'BEIGE', 'MARRON', 'OSCURO', 'CLARO', 'ITALIANO', 'AROMO'];
+          if (coloresComunes.some(c => palabras[3]?.startsWith(c))) {
+            tipoProducto = baseProducto;
           }
         }
+        
+        tipoProducto = tipoProducto.trim();
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
