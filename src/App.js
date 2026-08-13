@@ -230,7 +230,7 @@ const App = () => {
       filtrados = filtrados.filter(p => 
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
         p.variantes.some(v => v.sku.toLowerCase().includes(busqueda.toLowerCase()) ||
-                               v.color.toLowerCase().includes(busqueda.toLowerCase()))
+                               v.codigo.toLowerCase().includes(busqueda.toLowerCase()))
       );
     }
     
@@ -331,10 +331,25 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extraer nombre y color
-        const partes = prod.nombre.split(' ');
-        const color = partes[partes.length - 1]; // Último elemento es el color
-        const tipoProducto = partes.slice(0, -1).join(' '); // Todo menos el color
+        // Extraer nombre base removiendo códigos y números finales
+        let tipoProducto = prod.nombre.trim();
+        
+        // Remover código entre paréntesis: (COD.XXXXX) o (CODIGO)
+        tipoProducto = tipoProducto.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+        
+        // Remover números/códigos al final: "NOMBRE 1102" -> "NOMBRE"
+        tipoProducto = tipoProducto.replace(/\s+\d+(\.\d+)?$/g, '').trim();
+        
+        // Remover color si está al final (asumir que el último elemento podría ser color)
+        const partes = tipoProducto.split(' ');
+        if (partes.length > 2) {
+          // Si tiene más de 2 palabras, verificar si la última parece ser un color
+          // (palabras cortas o en minúscula inicial)
+          const ultimaPalabra = partes[partes.length - 1];
+          if (ultimaPalabra.length <= 10 && ultimaPalabra !== ultimaPalabra.toUpperCase()) {
+            tipoProducto = partes.slice(0, -1).join(' ').trim();
+          }
+        }
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
@@ -349,7 +364,6 @@ const App = () => {
           codigo: prod.codigo,
           nombre: prod.nombre,
           tipoProducto: tipoProducto,
-          color: color,
           precioNeto: precioSinIva,  // SIN IVA (calculado)
           precioBruto: precioConIva,  // CON IVA (del precio_bruto)
           stock: prod.stock || 0,
@@ -880,8 +894,8 @@ const App = () => {
                         {producto.variantes.map(v => (
                           <tr key={v.id} style={{borderTop: '1px solid #e5e7eb'}}>
                             <td style={{padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem'}}>
-                              <div style={{width: '1rem', height: '1rem', borderRadius: '50%', border: '1px solid #d1d5db', backgroundColor: COLORES[v.color.toLowerCase()] || '#CCCCCC'}}></div>
-                              <span>{v.color}</span>
+                              <div style={{width: '1rem', height: '1rem', borderRadius: '50%', border: '1px solid #d1d5db', backgroundColor: COLORES[v.codigo.toLowerCase()] || '#CCCCCC'}}></div>
+                              <span>{v.codigo}</span>
                             </td>
                             <td style={{padding: '0.5rem', fontFamily: 'monospace', fontSize: '0.7rem'}}>{v.sku}</td>
                             <td style={{padding: '0.5rem', textAlign: 'center', fontWeight: 'bold'}}>{v.stock}</td>
@@ -1285,7 +1299,7 @@ const App = () => {
                 <div style={{display: 'grid', gap: '1rem'}}>
                   {p.variantes.map(v => (
                     <div key={v.id} style={{display: 'grid', gridTemplateColumns: '150px 1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', background: '#f9f9f9', borderRadius: '0.5rem'}}>
-                      <span style={{fontWeight: 'bold', fontSize: '0.875rem'}}>{v.color}</span>
+                      <span style={{fontWeight: 'bold', fontSize: '0.875rem'}}>{v.codigo}</span>
                       <div>
                         <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>CON IVA (19%)</small>
                         <input
@@ -1349,7 +1363,7 @@ const App = () => {
               >
                 <option value="">-- Selecciona variante --</option>
                 {productos.flatMap(p => p.variantes.map(v => (
-                  <option key={v.id} value={v.id}>{p.nombre} - {v.color}</option>
+                  <option key={v.id} value={v.id}>{p.nombre} - {v.codigo}</option>
                 )))}
               </select>
               <input
