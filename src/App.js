@@ -227,11 +227,18 @@ const App = () => {
     let filtrados = productos;
     
     if (busqueda) {
-      filtrados = filtrados.filter(p => 
-        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-        p.variantes.some(v => v.sku.toLowerCase().includes(busqueda.toLowerCase()) ||
-                               v.codigo.toLowerCase().includes(busqueda.toLowerCase()))
-      );
+      filtrados = filtrados.filter(p => {
+        try {
+          return p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+            p.variantes.some(v => 
+              (v.sku && v.sku.toLowerCase().includes(busqueda.toLowerCase())) ||
+              (v.codigo && v.codigo.toLowerCase().includes(busqueda.toLowerCase())) ||
+              (v.color && v.color.toLowerCase().includes(busqueda.toLowerCase()))
+            );
+        } catch (e) {
+          return true; // Si hay error, incluir el producto
+        }
+      });
     }
     
     if (filtroMinPrice || filtroMaxPrice) {
@@ -331,25 +338,18 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extrae nombre base removiendo códigos y números al final
+        // Extrae nombre base removiendo códigos y números
         let tipoProducto = prod.nombre.trim();
         
-        // 1. Remover código entre paréntesis: (COD.XXXXX) o (cualquier código)
-        tipoProducto = tipoProducto.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+        // 1. Remover CUALQUIER cosa entre paréntesis: (COD.454599) → ""
+        tipoProducto = tipoProducto.replace(/\s*\([^)]*\)/g, '').trim();
         
-        // 2. Remover números al final: "NOMBRE 0229/062" o "NOMBRE 1102"
-        tipoProducto = tipoProducto.replace(/\s+[\d/]+\s*$/g, '').trim();
+        // 2. Remover números/decimales/barras al final: "NOMBRE 0.0MM" o "NOMBRE 0229/062"
+        tipoProducto = tipoProducto.replace(/\s+[\d.\/]+\s*$/g, '').trim();
         
-        // 3. Remover color si es la última palabra (palabras cortas o nombres de colores)
-        const palabras = tipoProducto.split(' ');
-        const coloresComunes = ['ROJO', 'BLANCO', 'NEGRO', 'AZUL', 'VERDE', 'AMARILLO', 'GRIS', 'CAFE', 'LILA', 'NARANJA', 'ROSA', 'BEIGE', 'MARRON', 'OSCURO', 'CLARO', 'ITALIANO', 'AROMO', 'BEIGE', 'PIEL', 'SUAVE', 'FUERTE', 'INVIERNO'];
-        
-        if (palabras.length > 1) {
-          const ultimaPalabra = palabras[palabras.length - 1];
-          // Si la última palabra parece un color (está en la lista o es corta)
-          if (coloresComunes.some(c => ultimaPalabra.toUpperCase().includes(c))) {
-            tipoProducto = palabras.slice(0, -1).join(' ').trim();
-          }
+        // 3. Si queda vacio, usar el original
+        if (!tipoProducto || tipoProducto.length === 0) {
+          tipoProducto = prod.nombre.trim();
         }
         
         if (!grupos[tipoProducto]) {
