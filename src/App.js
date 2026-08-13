@@ -331,16 +331,25 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extrae nombre base removiendo los últimos 2 elementos (color + código)
-        const palabras = prod.nombre.trim().split(' ');
+        // Extrae nombre base removiendo códigos y números al final
+        let tipoProducto = prod.nombre.trim();
         
-        // Si tiene más de 2 palabras, remover las últimas 2 (color + código)
-        // Si tiene menos, mantener como está
-        let tipoProducto;
-        if (palabras.length > 2) {
-          tipoProducto = palabras.slice(0, -2).join(' ').trim();
-        } else {
-          tipoProducto = prod.nombre.trim();
+        // 1. Remover código entre paréntesis: (COD.XXXXX) o (cualquier código)
+        tipoProducto = tipoProducto.replace(/\s*\([^)]*\)\s*$/g, '').trim();
+        
+        // 2. Remover números al final: "NOMBRE 0229/062" o "NOMBRE 1102"
+        tipoProducto = tipoProducto.replace(/\s+[\d/]+\s*$/g, '').trim();
+        
+        // 3. Remover color si es la última palabra (palabras cortas o nombres de colores)
+        const palabras = tipoProducto.split(' ');
+        const coloresComunes = ['ROJO', 'BLANCO', 'NEGRO', 'AZUL', 'VERDE', 'AMARILLO', 'GRIS', 'CAFE', 'LILA', 'NARANJA', 'ROSA', 'BEIGE', 'MARRON', 'OSCURO', 'CLARO', 'ITALIANO', 'AROMO', 'BEIGE', 'PIEL', 'SUAVE', 'FUERTE', 'INVIERNO'];
+        
+        if (palabras.length > 1) {
+          const ultimaPalabra = palabras[palabras.length - 1];
+          // Si la última palabra parece un color (está en la lista o es corta)
+          if (coloresComunes.some(c => ultimaPalabra.toUpperCase().includes(c))) {
+            tipoProducto = palabras.slice(0, -1).join(' ').trim();
+          }
         }
         
         if (!grupos[tipoProducto]) {
