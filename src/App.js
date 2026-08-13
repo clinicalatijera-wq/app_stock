@@ -1249,10 +1249,10 @@ const App = () => {
                     <div key={v.id} style={{display: 'grid', gridTemplateColumns: '150px 1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', background: '#f9f9f9', borderRadius: '0.5rem'}}>
                       <span style={{fontWeight: 'bold', fontSize: '0.875rem'}}>{v.color}</span>
                       <div>
-                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SIN IVA</small>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>CON IVA (19%)</small>
                         <input
                           type="number"
-                          value={v.precioSinIva}
+                          value={v.precioConIva || v.precioSinIva * 1.19}
                           onChange={(e) => {
                             const nuevosProd = productos.map(prod => 
                               prod.id === p.id 
@@ -1260,7 +1260,7 @@ const App = () => {
                                     ...prod,
                                     variantes: prod.variantes.map(var_ =>
                                       var_.id === v.id 
-                                        ? {...var_, precioSinIva: parseFloat(e.target.value) || 0}
+                                        ? {...var_, precioConIva: parseFloat(e.target.value) || 0}
                                         : var_
                                     )
                                   }
@@ -1273,10 +1273,10 @@ const App = () => {
                         />
                       </div>
                       <div>
-                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>CON IVA (19%)</small>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SIN IVA</small>
                         <input
                           type="number"
-                          value={(Math.round(v.precioSinIva * 1.19 * 100) / 100).toFixed(2)}
+                          value={(Math.round((v.precioConIva || v.precioSinIva * 1.19) / 1.19 * 100) / 100).toFixed(2)}
                           disabled
                           style={{width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '0.25rem', fontSize: '0.875rem', background: '#f0f0f0', cursor: 'not-allowed'}}
                         />
@@ -1286,7 +1286,7 @@ const App = () => {
                         <span style={{fontSize: '0.75rem', fontFamily: 'monospace'}}>{v.sku}</span>
                       </div>
                       <button
-                        onClick={() => actualizarPrecio(v.id, v.precioSinIva, p.id)}
+                        onClick={() => actualizarPrecio(v.id, Math.round((v.precioConIva || v.precioSinIva * 1.19) / 1.19 * 100) / 100, p.id)}
                         disabled={loading}
                         style={{background: '#3b82f6', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.25rem', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.75rem', fontWeight: 'bold', opacity: loading ? 0.6 : 1}}
                       >
