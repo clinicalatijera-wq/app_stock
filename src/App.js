@@ -118,13 +118,14 @@ const procesarProductosWordPress = async (productosWP) => {
       for (const variacionId of producto.variations) {
         try {
           const variacion = await fetchWordPress(`/products/${producto.id}/variations/${variacionId}`);
-          const precioSinIva = parseFloat(variacion.price) || 0;
+          const precioConIva = parseFloat(variacion.price) || 0;
+          const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
           variantes.push({
             id: variacion.id,
             sku: variacion.sku || `SKU-${variacion.id}`,
             color: variacion.attributes?.[0]?.option || 'Sin color',
+            precioConIva: precioConIva,
             precioSinIva: precioSinIva,
-            precioConIva: Math.round(precioSinIva * 1.19 * 100) / 100,
             stock: variacion.stock_quantity !== null ? variacion.stock_quantity : 0,
             descripcion: variacion.description || '',
           });
