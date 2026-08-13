@@ -331,35 +331,17 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extraer nombre base removiendo códigos y colores
-        let tipoProducto = prod.nombre.trim();
+        // Extrae nombre base removiendo los últimos 2 elementos (color + código)
+        const palabras = prod.nombre.trim().split(' ');
         
-        // Remover código entre paréntesis: (COD.XXXXX)
-        tipoProducto = tipoProducto.replace(/\s*\([^)]*\)\s*$/g, '').trim();
-        
-        // Remover código con barra: "NOMBRE 3602/03" -> "NOMBRE"
-        tipoProducto = tipoProducto.replace(/\s+\d+\/\d+\s*/g, ' ').trim();
-        
-        // Remover cualquier número al final
-        tipoProducto = tipoProducto.replace(/\s+\d+(\.\d+)?\s*$/g, '').trim();
-        
-        // Remover colores al final (palabras simples en mayúscula que no son el producto)
-        const palabras = tipoProducto.split(' ');
-        
-        // Si tiene más de 3 palabras, probablemente las últimas sean colores
-        // Mantener solo las primeras palabras "importantes"
-        if (palabras.length > 3) {
-          // Asumir que las primeras 2-3 palabras son el producto base
-          // y el resto son colores/atributos
-          const baseProducto = palabras.slice(0, 3).join(' ');
-          // Verificar si la palabra #4 parece un color (nombres de colores comunes)
-          const coloresComunes = ['ROJO', 'BLANCO', 'NEGRO', 'AZUL', 'VERDE', 'AMARILLO', 'GRIS', 'CAFE', 'LILA', 'NARANJA', 'ROSA', 'BEIGE', 'MARRON', 'OSCURO', 'CLARO', 'ITALIANO', 'AROMO'];
-          if (coloresComunes.some(c => palabras[3]?.startsWith(c))) {
-            tipoProducto = baseProducto;
-          }
+        // Si tiene más de 2 palabras, remover las últimas 2 (color + código)
+        // Si tiene menos, mantener como está
+        let tipoProducto;
+        if (palabras.length > 2) {
+          tipoProducto = palabras.slice(0, -2).join(' ').trim();
+        } else {
+          tipoProducto = prod.nombre.trim();
         }
-        
-        tipoProducto = tipoProducto.trim();
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
