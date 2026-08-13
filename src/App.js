@@ -123,8 +123,8 @@ const procesarProductosWordPress = async (productosWP) => {
             id: variacion.id,
             sku: variacion.sku || `SKU-${variacion.id}`,
             color: variacion.attributes?.[0]?.option || 'Sin color',
+            precioSinIva: precioSinIva,
             precioConIva: Math.round(precioSinIva * 1.19 * 100) / 100,
-            stock: variacion.stock_quantity !== null ? variacion.stock_quantity : 0,
             stock: variacion.stock_quantity !== null ? variacion.stock_quantity : 0,
             descripcion: variacion.description || '',
           });
@@ -310,14 +310,14 @@ const App = () => {
         return;
       }
 
-      // Agrupar por tipo de producto (remover última palabra = número, y penúltima = color)
+      // Agrupar por tipo de producto (remover último elemento del nombre que es el color)
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extraer nombre base (todo menos las 2 últimas palabras: color + número)
+        // Extraer nombre y color
         const partes = prod.nombre.split(' ');
-        const tipoProducto = partes.slice(0, -2).join(' '); // Todo menos las 2 últimas
-        const color = partes.length > 1 ? partes[partes.length - 2] : 'N/A'; // Penúltima
+        const color = partes[partes.length - 1]; // Último elemento es el color
+        const tipoProducto = partes.slice(0, -1).join(' '); // Todo menos el color
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
@@ -325,20 +325,17 @@ const App = () => {
         
         // El precio_bruto de Lioren es el PRECIO CON IVA
         // Calculamos el SIN IVA dividiendo entre 1.19
-        const precioConIva = prod.precioventabruto;
+        const precioConIva = prod.precio_bruto;
         const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
-        
-        // El stock viene en un array, sumamos todas las cantidades
-        const stockTotal = prod.stocks ? prod.stocks.reduce((sum, s) => sum + s.cantidad, 0) : 0;
         
         grupos[tipoProducto].push({
           codigo: prod.codigo,
           nombre: prod.nombre,
-          color: color,
           tipoProducto: tipoProducto,
+          color: color,
           precioNeto: precioSinIva,  // SIN IVA (calculado)
-          precioBruto: precioConIva,  // CON IVA (del precioventabruto)
-          stock: stockTotal,
+          precioBruto: precioConIva,  // CON IVA (del precio_bruto)
+          stock: prod.stock || 0,
         });
       });
 
@@ -356,11 +353,11 @@ const App = () => {
             attributes: [
               {
                 id: 0,
-                name: 'Variante',
+                name: 'Color',
                 position: 0,
                 visible: true,
                 variation: true,
-                options: variantes.map(v => v.codigo),
+                options: variantes.map(v => v.color),
               },
             ],
           };
@@ -378,8 +375,8 @@ const App = () => {
                 attributes: [
                   {
                     id: 0,
-                    name: 'Variante',
-                    option: variante.codigo,
+                    name: 'Color',
+                    option: variante.color,
                   },
                 ],
               };
@@ -391,7 +388,7 @@ const App = () => {
               );
               contadorVariantes++;
             } catch (error) {
-              console.log(`Variante ${variante.codigo} no se pudo crear:`, error.message);
+              console.log(`Variante ${variante.color} no se pudo crear:`, error.message);
             }
           }
         } catch (error) {
@@ -407,6 +404,10 @@ const App = () => {
       setLoading(false);
     }
   };
+
+  const actualizarFotoProducto = async (e) => {
+    e.preventDefault();
+    if (!editandoProducto || !productoEditar.imagen) {
       alert('Selecciona una imagen');
       return;
     }
@@ -1245,14 +1246,13 @@ const App = () => {
                 <h3 style={{margin: 0, marginBottom: '1rem', fontSize: '1rem', fontWeight: 'bold'}}>{p.nombre}</h3>
                 <div style={{display: 'grid', gap: '1rem'}}>
                   {p.variantes.map(v => (
-                  {p.variantes.map(v => (
                     <div key={v.id} style={{display: 'grid', gridTemplateColumns: '150px 1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', background: '#f9f9f9', borderRadius: '0.5rem'}}>
-                      <span style={{fontWeight: 'bold', fontSize: '0.875rem'}}>{v.sku}</span>
+                      <span style={{fontWeight: 'bold', fontSize: '0.875rem'}}>{v.color}</span>
                       <div>
-                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>CON IVA (19%)</small>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SIN IVA</small>
                         <input
                           type="number"
-                          value={v.precioConIva || 0}
+                          value={v.precioSinIva}
                           onChange={(e) => {
                             const nuevosProd = productos.map(prod => 
                               prod.id === p.id 
@@ -1260,7 +1260,7 @@ const App = () => {
                                     ...prod,
                                     variantes: prod.variantes.map(var_ =>
                                       var_.id === v.id 
-                                        ? {...var_, precioConIva: parseFloat(e.target.value) || 0}
+                                        ? {...var_, precioSinIva: parseFloat(e.target.value) || 0}
                                         : var_
                                     )
                                   }
@@ -1273,16 +1273,20 @@ const App = () => {
                         />
                       </div>
                       <div>
-                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SIN IVA</small>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>CON IVA (19%)</small>
                         <input
                           type="number"
-                          value={(Math.round((v.precioConIva || 0) / 1.19 * 100) / 100).toFixed(2)}
+                          value={(Math.round(v.precioSinIva * 1.19 * 100) / 100).toFixed(2)}
                           disabled
                           style={{width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '0.25rem', fontSize: '0.875rem', background: '#f0f0f0', cursor: 'not-allowed'}}
                         />
                       </div>
+                      <div>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SKU</small>
+                        <span style={{fontSize: '0.75rem', fontFamily: 'monospace'}}>{v.sku}</span>
+                      </div>
                       <button
-                        onClick={() => actualizarPrecio(v.id, Math.round((v.precioConIva || 0) / 1.19 * 100) / 100, p.id)}
+                        onClick={() => actualizarPrecio(v.id, v.precioSinIva, p.id)}
                         disabled={loading}
                         style={{background: '#3b82f6', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.25rem', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.75rem', fontWeight: 'bold', opacity: loading ? 0.6 : 1}}
                       >
@@ -1290,6 +1294,9 @@ const App = () => {
                       </button>
                     </div>
                   ))}
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
