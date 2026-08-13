@@ -141,6 +141,22 @@ const procesarProductosWordPress = async (productosWP) => {
         descripcion: producto.description || '',
         variantes: variantes,
       });
+    } else {
+      // Si no tiene variantes, crear una variante única con datos básicos del producto
+      productosFormateados.push({
+        id: producto.id,
+        nombre: producto.name,
+        descripcion: producto.description || '',
+        variantes: [{
+          id: producto.id,
+          sku: producto.sku || `SKU-${producto.id}`,
+          color: 'Variante única',
+          precioConIva: parseFloat(producto.price) || 0,
+          precioSinIva: Math.round((parseFloat(producto.price) || 0) / 1.19 * 100) / 100,
+          stock: producto.stock_quantity || 0,
+          descripcion: producto.description || '',
+        }]
+      });
     }
   }
   return productosFormateados;
@@ -343,6 +359,27 @@ const App = () => {
       let contadorNuevos = 0;
       let contadorVariantes = 0;
 
+      // Crear o obtener el atributo "Código" en WordPress
+      let atributoId = 0;
+      try {
+        const atributosExistentes = await fetchWordPress('/attributes');
+        const atributoCodigo = atributosExistentes.find(a => a.name === 'Código');
+        
+        if (atributoCodigo) {
+          atributoId = atributoCodigo.id;
+        } else {
+          const atributoCreado = await fetchWordPress('/attributes', 'POST', {
+            name: 'Código',
+            slug: 'codigo',
+            type: 'select',
+          });
+          atributoId = atributoCreado.id;
+        }
+      } catch (error) {
+        console.log('Error al crear atributo, usando ID por defecto:', error.message);
+        atributoId = 0;
+      }
+
       // Crear productos y variantes
       for (const [tipoProducto, variantes] of Object.entries(grupos)) {
         try {
@@ -353,12 +390,12 @@ const App = () => {
             description: `Importado desde Lioren - ${variantes.length} variantes`,
             attributes: [
               {
-                id: 0,
-                name: 'Color',
+                id: atributoId,
+                name: 'Código',
                 position: 0,
                 visible: true,
                 variation: true,
-                options: variantes.map(v => v.color),
+                options: variantes.map(v => v.codigo),
               },
             ],
           };
@@ -375,9 +412,9 @@ const App = () => {
                 stock_quantity: variante.stock,
                 attributes: [
                   {
-                    id: 0,
-                    name: 'Color',
-                    option: variante.color,
+                    id: atributoId,
+                    name: 'Código',
+                    option: variante.codigo,
                   },
                 ],
               };
