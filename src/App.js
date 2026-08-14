@@ -338,16 +338,25 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extrae nombre base removiendo códigos y números
-        let tipoProducto = prod.nombre.trim();
+        // Extrae nombre base según el patrón del producto
+        const tokens = prod.nombre.trim().split(' ');
+        const keywords = ['EXTRA', 'UKRYL', 'ETIQUETA', 'PALILLO', 'COLORS', 'LANAS', 'FESTIVAL'];
         
-        // 1. Remover CUALQUIER cosa entre paréntesis: (COD.454599) → ""
-        tipoProducto = tipoProducto.replace(/\s*\([^)]*\)/g, '').trim();
+        let tipoProducto;
         
-        // 2. Remover números/decimales/barras al final: "NOMBRE 0.0MM" o "NOMBRE 0229/062"
-        tipoProducto = tipoProducto.replace(/\s+[\d./]+\s*$/g, '').trim();
+        // Si el primer o segundo token es un keyword, tomar solo los primeros 2 tokens
+        if (tokens.length >= 2 && (keywords.includes(tokens[0].toUpperCase()) || keywords.includes(tokens[1]?.toUpperCase()))) {
+          tipoProducto = tokens.slice(0, 2).join(' ').trim();
+        } else {
+          // Si no, remover el último token si contiene dígitos
+          const lastToken = tokens[tokens.length - 1];
+          if (/\d/.test(lastToken) && tokens.length > 1) {
+            tokens.pop();
+          }
+          tipoProducto = tokens.join(' ').trim();
+        }
         
-        // 3. Si queda vacio, usar el original
+        // Si queda vacío, usar el nombre original
         if (!tipoProducto || tipoProducto.length === 0) {
           tipoProducto = prod.nombre.trim();
         }
