@@ -4,7 +4,7 @@ import './App.css';
 const WP_URL = 'https://latijera.cl';
 const WP_CONSUMER_KEY = 'ck_00ab7fccc2078bf5b48b4d68d02e4da048702542';
 const WP_CONSUMER_SECRET = 'cs_7e2ff15307605193e03af7230930dcdca7eef889';
-const LIOREN_URL = 'https://vps.latijera.cl';
+const LIOREN_URL = 'https://preshow-defiant-tactics.ngrok-free.dev';
 const LIOREN_TOKEN = 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJhdWQiOiIxODUwIiwianRpIjoiZjVkYTVhMDZhNmRjMmQwZDIxOTg5MDU3ZTY5ZDIzOTYzMGEyYjRmYzA1OWQxNDg1ODRiMjc3NGExNzgzNTVlZGU4MzIxYmMxMTUwYWE3YjUiLCJpYXQiOjE3ODYxMTUxMTAuNjQ5NTQ2LCJuYmYiOjE3ODYxMTUxMTAuNjQ5NTQ4LCJleHAiOjE4MTc2NTExMTAuNjQ1NDA1LCJzdWIiOiI4NjcxIiwic2NvcGVzIjpbXX0.E5LiDEAYvlyDE0gA2RuIc6FiOcuT0-4x1WA1lrsRfu_Cjcqvi9NqPPZhvDIqGMShomGZucb_28JO4IVtKb_1MdQJIgw3Dg3VMNBOiKa69aWaj5Rs3WO7luSbQ9mCJ-p5dt5hM2Q4r_ve_deqjjA_vVsqR5YDzV9YlYm7i29o8KgnDfcu1K03V1ASfh_aT-LlaCH7-B9wbFHtFH6VSTIMKjZJWLKXVuu2y0IS6MScIUdrRiZWE73r2pOcIu348_8WGX0JDUDY29DGoL98rMdOx71aS4VcIoemNOwA3oYyxX2S7UAr3tfqMZoG9aY_PYYfYzSVLOgbFlDJVc1wD_irUTw2ypubMoay2jKEs4MqJyYrRVpr83MOrh4hbaIqRrAagSBVDAg5JfXgMFt7AyvjL1oSaNQNbJa8B75eFg0sXS4jAdM4rswMkvpDyiXkVuOtCIecfeltE24zdZnjfKtV-z3Yk6AoT1mOI1hNskRUvnPerDntaS9mpbaBAeWfD5uEywRIPFOF7ovravP7-5YZ3AO131DQYt1-g35Zf5GIxQ1fBycdqge0B3BD1tybMPPt18WEDX3UYExBr9Bk21QNuUkHxBlfkCyGfEPcZe5i2kxYs9HuPQEFMWqfWXdQcXYk-G38cPKsbz-7TqZpXKJhbRvltdDgT7mqhzHxPzv5MkA';
 
 const fetchWordPress = async (endpoint, method = 'GET', body = null) => {
@@ -118,14 +118,13 @@ const procesarProductosWordPress = async (productosWP) => {
       for (const variacionId of producto.variations) {
         try {
           const variacion = await fetchWordPress(`/products/${producto.id}/variations/${variacionId}`);
-          const precioConIva = parseFloat(variacion.price) || 0;
-          const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
+          const precioSinIva = parseFloat(variacion.price) || 0;
           variantes.push({
             id: variacion.id,
             sku: variacion.sku || `SKU-${variacion.id}`,
             color: variacion.attributes?.[0]?.option || 'Sin color',
-            precioConIva: precioConIva,
             precioSinIva: precioSinIva,
+            precioConIva: Math.round(precioSinIva * 1.19 * 100) / 100,
             stock: variacion.stock_quantity !== null ? variacion.stock_quantity : 0,
             descripcion: variacion.description || '',
           });
@@ -140,22 +139,6 @@ const procesarProductosWordPress = async (productosWP) => {
         nombre: producto.name,
         descripcion: producto.description || '',
         variantes: variantes,
-      });
-    } else {
-      // Si no tiene variantes, crear una variante única con datos básicos del producto
-      productosFormateados.push({
-        id: producto.id,
-        nombre: producto.name,
-        descripcion: producto.description || '',
-        variantes: [{
-          id: producto.id,
-          sku: producto.sku || `SKU-${producto.id}`,
-          color: 'Variante única',
-          precioConIva: parseFloat(producto.price) || 0,
-          precioSinIva: Math.round((parseFloat(producto.price) || 0) / 1.19 * 100) / 100,
-          stock: producto.stock_quantity || 0,
-          descripcion: producto.description || '',
-        }]
       });
     }
   }
@@ -227,18 +210,11 @@ const App = () => {
     let filtrados = productos;
     
     if (busqueda) {
-      filtrados = filtrados.filter(p => {
-        try {
-          return p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-            p.variantes.some(v => 
-              (v.sku && v.sku.toLowerCase().includes(busqueda.toLowerCase())) ||
-              (v.codigo && v.codigo.toLowerCase().includes(busqueda.toLowerCase())) ||
-              (v.color && v.color.toLowerCase().includes(busqueda.toLowerCase()))
-            );
-        } catch (e) {
-          return true; // Si hay error, incluir el producto
-        }
-      });
+      filtrados = filtrados.filter(p => 
+        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+        p.variantes.some(v => v.sku.toLowerCase().includes(busqueda.toLowerCase()) ||
+                               v.color.toLowerCase().includes(busqueda.toLowerCase()))
+      );
     }
     
     if (filtroMinPrice || filtroMaxPrice) {
@@ -338,21 +314,17 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Estrategia simple: si tiene 3+ palabras, remover la última
-        const tokens = prod.nombre.trim().split(' ');
-        let tipoProducto;
-        
-        if (tokens.length >= 3) {
-          // Remover última palabra (casi siempre es color o código)
-          tipoProducto = tokens.slice(0, -1).join(' ').trim();
-        } else {
-          tipoProducto = prod.nombre.trim();
-        }
+        // Extraer nombre y color
+        const partes = prod.nombre.split(' ');
+        const color = partes[partes.length - 1]; // Último elemento es el color
+        const tipoProducto = partes.slice(0, -1).join(' '); // Todo menos el color
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
         }
         
+        // El precio_bruto de Lioren es el PRECIO CON IVA
+        // Calculamos el SIN IVA dividiendo entre 1.19
         const precioConIva = prod.precio_bruto;
         const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
         
@@ -360,8 +332,9 @@ const App = () => {
           codigo: prod.codigo,
           nombre: prod.nombre,
           tipoProducto: tipoProducto,
-          precioNeto: precioSinIva,
-          precioBruto: precioConIva,
+          color: color,
+          precioNeto: precioSinIva,  // SIN IVA (calculado)
+          precioBruto: precioConIva,  // CON IVA (del precio_bruto)
           stock: prod.stock || 0,
         });
       });
@@ -369,6 +342,9 @@ const App = () => {
       let contadorNuevos = 0;
       let contadorVariantes = 0;
 
+      // Crear productos y variantes
+      for (const [tipoProducto, variantes] of Object.entries(grupos)) {
+        try {
           const productoWP = {
             name: tipoProducto,
             type: 'variable',
@@ -376,12 +352,12 @@ const App = () => {
             description: `Importado desde Lioren - ${variantes.length} variantes`,
             attributes: [
               {
-                id: atributoId,
-                name: 'Código',
+                id: 0,
+                name: 'Color',
                 position: 0,
                 visible: true,
                 variation: true,
-                options: variantes.map(v => v.codigo),
+                options: variantes.map(v => v.color),
               },
             ],
           };
@@ -398,9 +374,9 @@ const App = () => {
                 stock_quantity: variante.stock,
                 attributes: [
                   {
-                    id: atributoId,
-                    name: 'Código',
-                    option: String(variante.codigo || ""),
+                    id: 0,
+                    name: 'Color',
+                    option: variante.color,
                   },
                 ],
               };
@@ -412,7 +388,7 @@ const App = () => {
               );
               contadorVariantes++;
             } catch (error) {
-              console.log(`Variante ${variante.codigo} no se pudo crear:`, error.message);
+              console.log(`Variante ${variante.color} no se pudo crear:`, error.message);
             }
           }
         } catch (error) {
@@ -866,8 +842,8 @@ const App = () => {
                         {producto.variantes.map(v => (
                           <tr key={v.id} style={{borderTop: '1px solid #e5e7eb'}}>
                             <td style={{padding: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.25rem'}}>
-                              <div style={{width: '1rem', height: '1rem', borderRadius: '50%', border: '1px solid #d1d5db', backgroundColor: COLORES[v.codigo.toLowerCase()] || '#CCCCCC'}}></div>
-                              <span>{v.codigo}</span>
+                              <div style={{width: '1rem', height: '1rem', borderRadius: '50%', border: '1px solid #d1d5db', backgroundColor: COLORES[v.color.toLowerCase()] || '#CCCCCC'}}></div>
+                              <span>{v.color}</span>
                             </td>
                             <td style={{padding: '0.5rem', fontFamily: 'monospace', fontSize: '0.7rem'}}>{v.sku}</td>
                             <td style={{padding: '0.5rem', textAlign: 'center', fontWeight: 'bold'}}>{v.stock}</td>
@@ -1271,12 +1247,12 @@ const App = () => {
                 <div style={{display: 'grid', gap: '1rem'}}>
                   {p.variantes.map(v => (
                     <div key={v.id} style={{display: 'grid', gridTemplateColumns: '150px 1fr 1fr 1fr auto', gap: '0.75rem', alignItems: 'center', padding: '0.75rem', background: '#f9f9f9', borderRadius: '0.5rem'}}>
-                      <span style={{fontWeight: 'bold', fontSize: '0.875rem'}}>{v.codigo}</span>
+                      <span style={{fontWeight: 'bold', fontSize: '0.875rem'}}>{v.color}</span>
                       <div>
-                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>CON IVA (19%)</small>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SIN IVA</small>
                         <input
                           type="number"
-                          value={v.precioConIva || v.precioSinIva * 1.19}
+                          value={v.precioSinIva}
                           onChange={(e) => {
                             const nuevosProd = productos.map(prod => 
                               prod.id === p.id 
@@ -1284,7 +1260,7 @@ const App = () => {
                                     ...prod,
                                     variantes: prod.variantes.map(var_ =>
                                       var_.id === v.id 
-                                        ? {...var_, precioConIva: parseFloat(e.target.value) || 0}
+                                        ? {...var_, precioSinIva: parseFloat(e.target.value) || 0}
                                         : var_
                                     )
                                   }
@@ -1297,10 +1273,10 @@ const App = () => {
                         />
                       </div>
                       <div>
-                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>SIN IVA</small>
+                        <small style={{color: '#666', fontSize: '0.75rem', display: 'block', marginBottom: '0.25rem'}}>CON IVA (19%)</small>
                         <input
                           type="number"
-                          value={(Math.round((v.precioConIva || v.precioSinIva * 1.19) / 1.19 * 100) / 100).toFixed(2)}
+                          value={(Math.round(v.precioSinIva * 1.19 * 100) / 100).toFixed(2)}
                           disabled
                           style={{width: '100%', padding: '0.5rem', border: '1px solid #ddd', borderRadius: '0.25rem', fontSize: '0.875rem', background: '#f0f0f0', cursor: 'not-allowed'}}
                         />
@@ -1310,7 +1286,7 @@ const App = () => {
                         <span style={{fontSize: '0.75rem', fontFamily: 'monospace'}}>{v.sku}</span>
                       </div>
                       <button
-                        onClick={() => actualizarPrecio(v.id, Math.round((v.precioConIva || v.precioSinIva * 1.19) / 1.19 * 100) / 100, p.id)}
+                        onClick={() => actualizarPrecio(v.id, v.precioSinIva, p.id)}
                         disabled={loading}
                         style={{background: '#3b82f6', color: 'white', padding: '0.5rem 1rem', borderRadius: '0.25rem', border: 'none', cursor: loading ? 'not-allowed' : 'pointer', fontSize: '0.75rem', fontWeight: 'bold', opacity: loading ? 0.6 : 1}}
                       >
@@ -1335,7 +1311,7 @@ const App = () => {
               >
                 <option value="">-- Selecciona variante --</option>
                 {productos.flatMap(p => p.variantes.map(v => (
-                  <option key={v.id} value={v.id}>{p.nombre} - {v.codigo}</option>
+                  <option key={v.id} value={v.id}>{p.nombre} - {v.color}</option>
                 )))}
               </select>
               <input
@@ -1379,7 +1355,7 @@ const App = () => {
                 if (!variante) return null;
                 return (
                   <div key={varianteId} style={{background: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', fontSize: '0.875rem'}}>
-                    <h4 style={{margin: 0, marginBottom: '1rem'}}>{variante.codigo} ({variante.sku})</h4>
+                    <h4 style={{margin: 0, marginBottom: '1rem'}}>{variante.color} ({variante.sku})</h4>
                     {cambios.reverse().map((cambio, idx) => (
                       <div key={idx} style={{padding: '0.5rem', background: '#f9fafb', borderRadius: '0.25rem', marginBottom: '0.5rem'}}>
                         {cambio.fecha}<br />${cambio.precioAnterior} → ${cambio.precioNuevo}
