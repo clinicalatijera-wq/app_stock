@@ -363,7 +363,10 @@ const App = () => {
                 position: 0,
                 visible: true,
                 variation: true,
-                options: productosGrupo.map(p => p.codigo),
+                options: productosGrupo.map(p => {
+                  const tokens = p.nombre.split(' ');
+                  return tokens[tokens.length - 1];
+                }),
               },
             ],
           };
@@ -374,18 +377,22 @@ const App = () => {
           // Crear variantes para cada producto del grupo
           for (const prod of productosGrupo) {
             try {
+              // Extraer el código del último token del nombre
+              const tokensFinal = prod.nombre.split(' ');
+              const codigoVariante = tokensFinal[tokensFinal.length - 1];
+              
               const precioSinIva = Math.round((prod.precio_bruto / 1.19) * 100) / 100;
               const stockProducto = prod.stocks ? prod.stocks[0].cantidad : 0;
               
               const varianteWP = {
-                sku: prod.codigo,
+                sku: codigoVariante,
                 regular_price: precioSinIva,
                 stock_quantity: stockProducto,
                 attributes: [
                   {
                     id: 0,
                     name: 'Código',
-                    option: prod.codigo,
+                    option: codigoVariante,
                   },
                 ],
               };
@@ -397,7 +404,7 @@ const App = () => {
               );
               contadorVariantes++;
             } catch (error) {
-              console.log(`Variante ${prod.codigo} no se pudo crear:`, error.message);
+              console.log(`Variante ${codigoVariante} no se pudo crear:`, error.message);
             }
           }
         } catch (error) {
