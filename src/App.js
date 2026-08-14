@@ -314,18 +314,29 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extrae nombre base: remover solo el último token si contiene números
+        // Filtrar productos de cordonería (PCS, MM)
+        if (prod.nombre.toUpperCase().includes('PCS') || prod.nombre.toUpperCase().includes('MM')) {
+          return; // Saltar este producto
+        }
+        
+        // Extrae nombre base: remover tokens del final que sean unidades (PCS, MM, KLEIN, etc)
         let tokens = prod.nombre.trim().split(' ');
         let tipoProducto = prod.nombre.trim();
         
-        // Solo remover el último token si contiene dígitos
-        if (tokens.length > 1) {
-          const lastToken = tokens[tokens.length - 1];
-          if (/\d/.test(lastToken)) {
-            // Si el último token tiene dígitos, remover
-            tipoProducto = tokens.slice(0, -1).join(' ').trim();
+        // Palabras que representan unidades/medidas y deben removerse
+        const unidades = ['PCS', 'MM', 'CM', 'KLEIN', 'M', 'METROS', 'UNIDAD', 'PACK'];
+        
+        // Remover últimos tokens mientras sean unidades
+        while (tokens.length > 1) {
+          const lastToken = tokens[tokens.length - 1].toUpperCase();
+          if (unidades.includes(lastToken)) {
+            tokens.pop();
+          } else {
+            break;
           }
         }
+        
+        tipoProducto = tokens.join(' ').trim();
         
         // Si queda vacío, usar el original
         if (!tipoProducto || tipoProducto.length === 0) {
