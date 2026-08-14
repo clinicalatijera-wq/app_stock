@@ -338,26 +338,14 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extrae nombre base removiendo códigos y números del FINAL
-        let tokens = prod.nombre.trim().split(' ');
+        // Estrategia simple: si tiene 3+ palabras, remover la última
+        const tokens = prod.nombre.trim().split(' ');
+        let tipoProducto;
         
-        // Remover tokens del final mientras contengan dígitos o sean colores
-        const coloresComunes = ['ROJO', 'BLANCO', 'NEGRO', 'AZUL', 'VERDE', 'AMARILLO', 'GRIS', 'CAFE', 'LILA', 'NARANJA', 'ROSA', 'BEIGE', 'MARRON', 'AROMO', 'ITALIANO'];
-        
-        while (tokens.length > 1) {
-          const lastToken = tokens[tokens.length - 1];
-          // Si contiene dígitos O es un color conocido, remover
-          if (/\d/.test(lastToken) || coloresComunes.some(c => lastToken.toUpperCase().includes(c))) {
-            tokens.pop();
-          } else {
-            break;
-          }
-        }
-        
-        let tipoProducto = tokens.join(' ').trim();
-        
-        // Si queda vacío, usar el original
-        if (!tipoProducto || tipoProducto.length === 0) {
+        if (tokens.length >= 3) {
+          // Remover última palabra (casi siempre es color o código)
+          tipoProducto = tokens.slice(0, -1).join(' ').trim();
+        } else {
           tipoProducto = prod.nombre.trim();
         }
         
@@ -381,30 +369,6 @@ const App = () => {
       let contadorNuevos = 0;
       let contadorVariantes = 0;
 
-      // Crear o obtener el atributo "Código" en WordPress
-      let atributoId = 0;
-      try {
-        const atributosExistentes = await fetchWordPress('/attributes');
-        const atributoCodigo = atributosExistentes.find(a => a.name === 'Código');
-        
-        if (atributoCodigo) {
-          atributoId = atributoCodigo.id;
-        } else {
-          const atributoCreado = await fetchWordPress('/attributes', 'POST', {
-            name: 'Código',
-            slug: 'codigo',
-            type: 'select',
-          });
-          atributoId = atributoCreado.id;
-        }
-      } catch (error) {
-        console.log('Error al crear atributo, usando ID por defecto:', error.message);
-        atributoId = 0;
-      }
-
-      // Crear productos y variantes
-      for (const [tipoProducto, variantes] of Object.entries(grupos)) {
-        try {
           const productoWP = {
             name: tipoProducto,
             type: 'variable',
@@ -429,14 +393,14 @@ const App = () => {
           for (const variante of variantes) {
             try {
               const varianteWP = {
-                sku: variante.codigo,
+                sku: String(variante.codigo || ""),
                 regular_price: Math.round(variante.precioNeto * 100) / 100,
                 stock_quantity: variante.stock,
                 attributes: [
                   {
                     id: atributoId,
                     name: 'Código',
-                    option: variante.codigo,
+                    option: String(variante.codigo || ""),
                   },
                 ],
               };
@@ -448,7 +412,7 @@ const App = () => {
               );
               contadorVariantes++;
             } catch (error) {
-              console.log(`Variante ${variante.color} no se pudo crear:`, error.message);
+              console.log(`Variante ${variante.codigo} no se pudo crear:`, error.message);
             }
           }
         } catch (error) {
@@ -1415,7 +1379,7 @@ const App = () => {
                 if (!variante) return null;
                 return (
                   <div key={varianteId} style={{background: 'white', padding: '1.5rem', borderRadius: '0.5rem', boxShadow: '0 4px 6px rgba(0,0,0,0.1)', fontSize: '0.875rem'}}>
-                    <h4 style={{margin: 0, marginBottom: '1rem'}}>{variante.color} ({variante.sku})</h4>
+                    <h4 style={{margin: 0, marginBottom: '1rem'}}>{variante.codigo} ({variante.sku})</h4>
                     {cambios.reverse().map((cambio, idx) => (
                       <div key={idx} style={{padding: '0.5rem', background: '#f9fafb', borderRadius: '0.25rem', marginBottom: '0.5rem'}}>
                         {cambio.fecha}<br />${cambio.precioAnterior} → ${cambio.precioNuevo}
