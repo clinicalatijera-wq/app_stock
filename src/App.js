@@ -314,34 +314,10 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Filtrar productos de cordonería (PCS, MM)
-        if (prod.nombre.toUpperCase().includes('PCS') || prod.nombre.toUpperCase().includes('MM')) {
-          return; // Saltar este producto
-        }
-        
-        // Extrae nombre base: remover tokens del final que sean unidades (PCS, MM, KLEIN, etc)
-        let tokens = prod.nombre.trim().split(' ');
-        let tipoProducto = prod.nombre.trim();
-        
-        // Palabras que representan unidades/medidas y deben removerse
-        const unidades = ['PCS', 'MM', 'CM', 'KLEIN', 'M', 'METROS', 'UNIDAD', 'PACK'];
-        
-        // Remover últimos tokens mientras sean unidades
-        while (tokens.length > 1) {
-          const lastToken = tokens[tokens.length - 1].toUpperCase();
-          if (unidades.includes(lastToken)) {
-            tokens.pop();
-          } else {
-            break;
-          }
-        }
-        
-        tipoProducto = tokens.join(' ').trim();
-        
-        // Si queda vacío, usar el original
-        if (!tipoProducto || tipoProducto.length === 0) {
-          tipoProducto = prod.nombre.trim();
-        }
+        // Extraer nombre y color
+        const partes = prod.nombre.split(' ');
+        const color = partes[partes.length - 1]; // Último elemento es el color
+        const tipoProducto = partes.slice(0, -1).join(' '); // Todo menos el color
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
@@ -352,14 +328,11 @@ const App = () => {
         const precioConIva = prod.precio_bruto;
         const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
         
-        // Extraer código de variante del nombre (último token)
-        const tokensNombre = prod.nombre.split(' ');
-        const codigoVariante = tokensNombre[tokensNombre.length - 1];
-        
         grupos[tipoProducto].push({
-          codigo: codigoVariante,
+          codigo: prod.codigo,
           nombre: prod.nombre,
           tipoProducto: tipoProducto,
+          color: color,
           precioNeto: precioSinIva,  // SIN IVA (calculado)
           precioBruto: precioConIva,  // CON IVA (del precio_bruto)
           stock: prod.stock || 0,
