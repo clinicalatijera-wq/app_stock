@@ -314,10 +314,28 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extraer nombre y color
-        const partes = prod.nombre.split(' ');
-        const color = partes[partes.length - 1]; // Último elemento es el color
-        const tipoProducto = partes.slice(0, -1).join(' '); // Todo menos el color
+        // Extrae nombre base removiendo códigos y números del FINAL
+        let tokens = prod.nombre.trim().split(' ');
+        
+        // Remover tokens del final mientras contengan dígitos o sean colores
+        const coloresComunes = ['ROJO', 'BLANCO', 'NEGRO', 'AZUL', 'VERDE', 'AMARILLO', 'GRIS', 'CAFE', 'LILA', 'NARANJA', 'ROSA', 'BEIGE', 'MARRON', 'AROMO', 'ITALIANO'];
+        
+        while (tokens.length > 1) {
+          const lastToken = tokens[tokens.length - 1];
+          // Si contiene dígitos O es un color conocido, remover
+          if (/\d/.test(lastToken) || coloresComunes.some(c => lastToken.toUpperCase().includes(c))) {
+            tokens.pop();
+          } else {
+            break;
+          }
+        }
+        
+        let tipoProducto = tokens.join(' ').trim();
+        
+        // Si queda vacío, usar el original
+        if (!tipoProducto || tipoProducto.length === 0) {
+          tipoProducto = prod.nombre.trim();
+        }
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
