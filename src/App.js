@@ -328,11 +328,14 @@ const App = () => {
         const precioConIva = prod.precio_bruto;
         const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
         
+        // Extraer código de variante del nombre (último token)
+        const tokensNombre = prod.nombre.split(' ');
+        const codigoVariante = tokensNombre[tokensNombre.length - 1];
+        
         grupos[tipoProducto].push({
-          codigo: prod.codigo,
+          codigo: codigoVariante,
           nombre: prod.nombre,
           tipoProducto: tipoProducto,
-          color: color,
           precioNeto: precioSinIva,  // SIN IVA (calculado)
           precioBruto: precioConIva,  // CON IVA (del precio_bruto)
           stock: prod.stock || 0,
