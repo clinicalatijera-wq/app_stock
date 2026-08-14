@@ -345,7 +345,7 @@ const App = () => {
         tipoProducto = tipoProducto.replace(/\s*\([^)]*\)/g, '').trim();
         
         // 2. Remover números/decimales/barras al final: "NOMBRE 0.0MM" o "NOMBRE 0229/062"
-        tipoProducto = tipoProducto.replace(/\s+[\d.\/]+\s*$/g, '').trim();
+        tipoProducto = tipoProducto.replace(/\s+[\d./]+\s*$/g, '').trim();
         
         // 3. Si queda vacio, usar el original
         if (!tipoProducto || tipoProducto.length === 0) {
