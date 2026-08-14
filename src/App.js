@@ -338,25 +338,25 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extrae nombre base según el patrón del producto
-        const tokens = prod.nombre.trim().split(' ');
-        const keywords = ['EXTRA', 'UKRYL', 'ETIQUETA', 'PALILLO', 'COLORS', 'LANAS', 'FESTIVAL'];
+        // Extrae nombre base removiendo códigos y números del FINAL
+        let tokens = prod.nombre.trim().split(' ');
         
-        let tipoProducto;
+        // Remover tokens del final mientras contengan dígitos o sean colores
+        const coloresComunes = ['ROJO', 'BLANCO', 'NEGRO', 'AZUL', 'VERDE', 'AMARILLO', 'GRIS', 'CAFE', 'LILA', 'NARANJA', 'ROSA', 'BEIGE', 'MARRON', 'AROMO', 'ITALIANO'];
         
-        // Si el primer o segundo token es un keyword, tomar solo los primeros 2 tokens
-        if (tokens.length >= 2 && (keywords.includes(tokens[0].toUpperCase()) || keywords.includes(tokens[1]?.toUpperCase()))) {
-          tipoProducto = tokens.slice(0, 2).join(' ').trim();
-        } else {
-          // Si no, remover el último token si contiene dígitos
+        while (tokens.length > 1) {
           const lastToken = tokens[tokens.length - 1];
-          if (/\d/.test(lastToken) && tokens.length > 1) {
+          // Si contiene dígitos O es un color conocido, remover
+          if (/\d/.test(lastToken) || coloresComunes.some(c => lastToken.toUpperCase().includes(c))) {
             tokens.pop();
+          } else {
+            break;
           }
-          tipoProducto = tokens.join(' ').trim();
         }
         
-        // Si queda vacío, usar el nombre original
+        let tipoProducto = tokens.join(' ').trim();
+        
+        // Si queda vacío, usar el original
         if (!tipoProducto || tipoProducto.length === 0) {
           tipoProducto = prod.nombre.trim();
         }
@@ -365,8 +365,6 @@ const App = () => {
           grupos[tipoProducto] = [];
         }
         
-        // El precio_bruto de Lioren es el PRECIO CON IVA
-        // Calculamos el SIN IVA dividiendo entre 1.19
         const precioConIva = prod.precio_bruto;
         const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
         
@@ -374,8 +372,8 @@ const App = () => {
           codigo: prod.codigo,
           nombre: prod.nombre,
           tipoProducto: tipoProducto,
-          precioNeto: precioSinIva,  // SIN IVA (calculado)
-          precioBruto: precioConIva,  // CON IVA (del precio_bruto)
+          precioNeto: precioSinIva,
+          precioBruto: precioConIva,
           stock: prod.stock || 0,
         });
       });
