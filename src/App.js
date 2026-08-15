@@ -310,63 +310,54 @@ const App = () => {
         return;
       }
 
-      // Agrupar productos por nombre base (remover números/unidades del final)
+      // Agrupar por tipo de producto (remover último elemento del nombre que es el color)
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Remover PCS y MM completamente
-        if (prod.nombre.toUpperCase().includes('PCS') || prod.nombre.toUpperCase().includes('MM')) {
-          return; // Saltar este producto
-        }
-        
-        // Extraer nombre base
-        let tokens = prod.nombre.trim().split(' ');
-        const unidades = ['KLEIN', 'CM'];
-        
-        // Remover últimos tokens que sean números o unidades
-        while (tokens.length > 1) {
-          const lastToken = tokens[tokens.length - 1].toUpperCase();
-          if (/\d/.test(lastToken) || unidades.includes(lastToken)) {
-            tokens.pop();
-          } else {
-            break;
-          }
-        }
-        
-        let tipoProducto = tokens.join(' ').trim();
-        if (!tipoProducto || tipoProducto.length === 0) {
-          tipoProducto = prod.nombre.trim();
-        }
+        // Extraer nombre y color
+        const partes = prod.nombre.split(' ');
+        const color = partes[partes.length - 1]; // Último elemento es el color
+        const tipoProducto = partes.slice(0, -1).join(' '); // Todo menos el color
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
         }
         
-        grupos[tipoProducto].push(prod);
+        // El precio_bruto de Lioren es el PRECIO CON IVA
+        // Calculamos el SIN IVA dividiendo entre 1.19
+        const precioConIva = prod.precio_bruto;
+        const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
+        
+        grupos[tipoProducto].push({
+          codigo: prod.codigo,
+          nombre: prod.nombre,
+          tipoProducto: tipoProducto,
+          color: color,
+          precioNeto: precioSinIva,  // SIN IVA (calculado)
+          precioBruto: precioConIva,  // CON IVA (del precio_bruto)
+          stock: prod.stock || 0,
+        });
       });
 
       let contadorNuevos = 0;
       let contadorVariantes = 0;
 
-      // Crear productos agrupados con variantes
-      for (const [tipoProducto, productosGrupo] of Object.entries(grupos)) {
+      // Crear productos y variantes
+      for (const [tipoProducto, variantes] of Object.entries(grupos)) {
         try {
           const productoWP = {
             name: tipoProducto,
             type: 'variable',
             sku: `LIO-${Date.now()}`,
-            description: `Importado desde Lioren - ${productosGrupo.length} variantes`,
+            description: `Importado desde Lioren - ${variantes.length} variantes`,
             attributes: [
               {
                 id: 0,
-                name: 'Código',
+                name: 'Color',
                 position: 0,
                 visible: true,
                 variation: true,
-                options: productosGrupo.map(p => {
-                  const tokens = p.nombre.split(' ');
-                  return tokens[tokens.length - 1];
-                }),
+                options: variantes.map(v => v.color),
               },
             ],
           };
@@ -374,25 +365,18 @@ const App = () => {
           const productoCreado = await fetchWordPress('/products', 'POST', productoWP);
           contadorNuevos++;
 
-          // Crear variantes para cada producto del grupo
-          for (const prod of productosGrupo) {
-            // Extraer el código del último token del nombre - AQUÍ, AFUERA del try
-            const tokensFinal = prod.nombre.split(' ');
-            const codigoVariante = tokensFinal[tokensFinal.length - 1];
-            
+          // Crear variantes
+          for (const variante of variantes) {
             try {
-              const precioSinIva = Math.round((prod.precio_bruto / 1.19) * 100) / 100;
-              const stockProducto = prod.stocks ? prod.stocks[0].cantidad : 0;
-              
               const varianteWP = {
-                sku: codigoVariante,
-                regular_price: precioSinIva,
-                stock_quantity: stockProducto,
+                sku: variante.codigo,
+                regular_price: Math.round(variante.precioNeto * 100) / 100,
+                stock_quantity: variante.stock,
                 attributes: [
                   {
                     id: 0,
-                    name: 'Código',
-                    option: codigoVariante,
+                    name: 'Color',
+                    option: variante.color,
                   },
                 ],
               };
@@ -404,7 +388,7 @@ const App = () => {
               );
               contadorVariantes++;
             } catch (error) {
-              console.log(`Variante ${codigoVariante} no se pudo crear:`, error.message);
+              console.log(`Variante ${variante.color} no se pudo crear:`, error.message);
             }
           }
         } catch (error) {
