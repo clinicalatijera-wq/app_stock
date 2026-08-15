@@ -376,11 +376,11 @@ const App = () => {
 
           // Crear variantes para cada producto del grupo
           for (const prod of productosGrupo) {
+            // Extraer el código del último token del nombre - AQUÍ, AFUERA del try
+            const tokensFinal = prod.nombre.split(' ');
+            const codigoVariante = tokensFinal[tokensFinal.length - 1];
+            
             try {
-              // Extraer el código del último token del nombre
-              const tokensFinal = prod.nombre.split(' ');
-              const codigoVariante = tokensFinal[tokensFinal.length - 1];
-              
               const precioSinIva = Math.round((prod.precio_bruto / 1.19) * 100) / 100;
               const stockProducto = prod.stocks ? prod.stocks[0].cantidad : 0;
               
