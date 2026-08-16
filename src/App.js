@@ -339,63 +339,26 @@ const App = () => {
       });
 
       let contadorNuevos = 0;
-      let contadorVariantes = 0;
 
       // Crear productos y variantes
-      for (const [tipoProducto, variantes] of Object.entries(grupos)) {
+      for (const [tipoProducto, productosGrupo] of Object.entries(grupos)) {
         try {
           const productoWP = {
             name: tipoProducto,
-            type: 'variable',
+            type: 'simple',
             sku: `LIO-${Date.now()}`,
-            description: `Importado desde Lioren - ${variantes.length} variantes`,
-            attributes: [
-              {
-                id: 0,
-                name: 'Color',
-                position: 0,
-                visible: true,
-                variation: true,
-                options: variantes.map(v => v.color),
-              },
-            ],
+            description: `Importado desde Lioren`,
           };
 
           const productoCreado = await fetchWordPress('/products', 'POST', productoWP);
           contadorNuevos++;
 
-          // Crear variantes
-          for (const variante of variantes) {
-            try {
-              const varianteWP = {
-                sku: variante.codigo,
-                regular_price: Math.round(variante.precioNeto * 100) / 100,
-                stock_quantity: variante.stock,
-                attributes: [
-                  {
-                    id: 0,
-                    name: 'Color',
-                    option: variante.color,
-                  },
-                ],
-              };
-
-              await fetchWordPress(
-                `/products/${productoCreado.id}/variations`,
-                'POST',
-                varianteWP
-              );
-              contadorVariantes++;
-            } catch (error) {
-              console.log(`Variante ${variante.color} no se pudo crear:`, error.message);
-            }
-          }
         } catch (error) {
           console.log(`Producto ${tipoProducto} no se pudo crear:`, error.message);
         }
       }
 
-      alert(`✅ Sincronización exitosa!\n${contadorNuevos} productos\n${contadorVariantes} variantes`);
+      alert(`✅ Sincronización exitosa!\n${contadorNuevos} productos`);
       cargarProductos();
     } catch (error) {
       alert('Error en sincronización: ' + error.message);
