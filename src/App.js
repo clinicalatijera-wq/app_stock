@@ -310,51 +310,27 @@ const App = () => {
         return;
       }
 
-      // Agrupar por tipo de producto (remover último elemento del nombre que es el color)
-      const grupos = {};
-      
-      productosLiboren.forEach(prod => {
-        // Usar el nombre completo como tipo de producto (sin agrupar por ahora)
-        const tipoProducto = prod.nombre;
-        const color = ''; // No necesitamos color para versión simple
-        
-        if (!grupos[tipoProducto]) {
-          grupos[tipoProducto] = [];
-        }
-        
-        // El precio_bruto de Lioren es el PRECIO CON IVA
-        // Calculamos el SIN IVA dividiendo entre 1.19
-        const precioConIva = prod.precio_bruto;
-        const precioSinIva = Math.round(precioConIva / 1.19 * 100) / 100;
-        
-        grupos[tipoProducto].push({
-          codigo: prod.codigo,
-          nombre: prod.nombre,
-          tipoProducto: tipoProducto,
-          color: color,
-          precioNeto: precioSinIva,  // SIN IVA (calculado)
-          precioBruto: precioConIva,  // CON IVA (del precio_bruto)
-          stock: prod.stock || 0,
-        });
-      });
+
 
       let contadorNuevos = 0;
 
-      // Crear productos y variantes
-      for (const [tipoProducto, productosGrupo] of Object.entries(grupos)) {
+      // Crear productos simples
+      for (const prod of productosLiboren) {
         try {
           const productoWP = {
-            name: tipoProducto,
+            name: prod.nombre,
             type: 'simple',
-            sku: `LIO-${Date.now()}`,
+            sku: prod.codigo,
+            regular_price: Math.round((prod.precio_bruto / 1.19) * 100) / 100,
+            stock_quantity: prod.stocks ? prod.stocks[0].cantidad : 0,
             description: `Importado desde Lioren`,
           };
 
-          const productoCreado = await fetchWordPress('/products', 'POST', productoWP);
+          await fetchWordPress('/products', 'POST', productoWP);
           contadorNuevos++;
 
         } catch (error) {
-          console.log(`Producto ${tipoProducto} no se pudo crear:`, error.message);
+          console.log(`Producto ${prod.nombre} no se pudo crear:`, error.message);
         }
       }
 
