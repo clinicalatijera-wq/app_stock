@@ -323,14 +323,17 @@ const App = () => {
         
         try {
           // Asegurar que el precio sea válido
-          const precioSinIva = Math.round((prod.precio_bruto / 1.19) * 100) / 100;
+          const precioSinIva = prod.precio_bruto ? Math.round((prod.precio_bruto / 1.19) * 100) / 100 : 0;
+          
+          // SKU único: agregar timestamp para evitar duplicados
+          const skuUnico = `${prod.codigo || `PRD-${prod.id}`}-${Date.now()}`;
           
           const productoWP = {
             name: prod.nombre,
             type: 'simple',
             status: 'publish',
-            sku: prod.codigo || `SKU-${prod.id}`,
-            regular_price: precioSinIva,
+            sku: skuUnico,
+            regular_price: precioSinIva || 1,
             stock_quantity: prod.stocks && prod.stocks[0] ? prod.stocks[0].cantidad : 0,
           };
 
