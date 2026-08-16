@@ -304,7 +304,7 @@ const App = () => {
   const sincronizarDesdeLiboren = async () => {
     setLoading(true);
     try {
-      const productosLiboren = await fetchLioren('/api/lioren/productos');
+      const productosLiboren = await fetchLioren('/api/lioren/productos?per_page=500');
       if (!productosLiboren || productosLiboren.length === 0) {
         alert('No hay productos en Lioren');
         return;
@@ -323,7 +323,11 @@ const App = () => {
         
         try {
           // Asegurar que el precio sea válido
-          const precioSinIva = prod.precio_bruto ? Math.round((prod.precio_bruto / 1.19) * 100) / 100 : 0;
+          let precioSinIva = 0;
+          if (prod.precio_bruto && !isNaN(prod.precio_bruto)) {
+            precioSinIva = Math.round((parseFloat(prod.precio_bruto) / 1.19) * 100) / 100;
+          }
+          if (!precioSinIva || precioSinIva < 1) precioSinIva = 1;
           
           // SKU único: agregar timestamp para evitar duplicados
           const skuUnico = `${prod.codigo || `PRD-${prod.id}`}-${Date.now()}`;
@@ -333,7 +337,7 @@ const App = () => {
             type: 'simple',
             status: 'publish',
             sku: skuUnico,
-            regular_price: precioSinIva || 1,
+            regular_price: precioSinIva.toString(),
             stock_quantity: prod.stocks && prod.stocks[0] ? prod.stocks[0].cantidad : 0,
           };
 
