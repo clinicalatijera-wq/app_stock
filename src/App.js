@@ -314,10 +314,9 @@ const App = () => {
       const grupos = {};
       
       productosLiboren.forEach(prod => {
-        // Extraer nombre y color
-        const partes = prod.nombre.split(' ');
-        const color = partes[partes.length - 1]; // Último elemento es el color
-        const tipoProducto = partes.slice(0, -1).join(' '); // Todo menos el color
+        // Usar el nombre completo como tipo de producto (sin agrupar por ahora)
+        const tipoProducto = prod.nombre;
+        const color = ''; // No necesitamos color para versión simple
         
         if (!grupos[tipoProducto]) {
           grupos[tipoProducto] = [];
