@@ -328,6 +328,7 @@ const App = () => {
           const productoWP = {
             name: prod.nombre,
             type: 'simple',
+            status: 'publish',
             sku: prod.codigo || `SKU-${prod.id}`,
             regular_price: precioSinIva,
             stock_quantity: prod.stocks && prod.stocks[0] ? prod.stocks[0].cantidad : 0,
