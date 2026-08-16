@@ -385,20 +385,55 @@ const App = () => {
         regular_price: precioSinIva,
       });
 
-      // Intentar actualizar en Lioren (opcional)
+      // Actualizar en Lioren
       try {
-        await fetchLioren(`/api/lioren/productos/${varianteId}`, 'PUT', {
-          precio_neto: precioSinIva,
-          precio_bruto: precioConIva,
+        const lioren_update = {
+          id: varianteId,
+          precioneto: precioSinIva,
+          preciobruto: precioConIva,
+        };
+        
+        await fetch(`https://cl.lioren.enterprises/empresas/la-tijera-limitada/productos/${varianteId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lioren_update),
+          credentials: 'include'
         });
       } catch (err) {
-        console.log('No se pudo actualizar en Lioren, pero WP sí fue actualizado');
+        console.log('Nota: Precio actualizado en WordPress, error en Lioren:', err.message);
       }
 
       alert('✅ Precio actualizado en WordPress!');
       cargarProductos();
     } catch (error) {
       alert('Error: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+
+  const actualizarStock = async (codigo, cantidad, bodega = 4020) => {
+    setLoading(true);
+    try {
+      const stockData = {
+        codigo: codigo,
+        bodega: bodega,
+        cantidad: cantidad,
+        stock: cantidad,
+      };
+      
+      await fetch('https://cl.lioren.enterprises/empresas/la-tijera-limitada/stocks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(stockData),
+        credentials: 'include'
+      });
+      
+      alert('✅ Stock actualizado en Lioren!');
+      cargarProductos();
+    } catch (error) {
+      alert('Error actualizando stock: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -456,10 +491,32 @@ const App = () => {
         fraccionable: false,
       };
       
+      // Crear en Lioren (sin token, haremos un POST simple)
       try {
-        await fetchLioren('/api/lioren/productos', 'POST', productoLioren)
+        const lioren_payload = {
+          codigo: nuevoProducto.sku || `PRD-${Date.now()}`,
+          nombre: nuevoProducto.nombre,
+          precioneto: precioSinIva,
+          preciobruto: precioConIva,
+          descripcion: nuevoProducto.descripcion || '',
+          unidad: 1,
+          fraccionable: 0,
+          param1: '',
+          param2: '',
+          param3: '',
+          param4: '',
+          wooproducts: [{ id: 1224, nombre: 'La Tijera Web', activo: 1 }],
+        };
+        
+        // Hacer POST directo a Lioren
+        await fetch('https://cl.lioren.enterprises/empresas/la-tijera-limitada/productos', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(lioren_payload),
+          credentials: 'include'
+        });
       } catch (lioreError) {
-        console.log('Nota: Producto creado en WordPress');
+        console.log('Nota: Producto creado en WordPress pero hubo error en Lioren');
       }
       
       alert('✅ Producto creado en WordPress y Lioren!');
