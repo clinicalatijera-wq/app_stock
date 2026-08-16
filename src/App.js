@@ -413,32 +413,6 @@ const App = () => {
   };
 
 
-  const actualizarStock = async (codigo, cantidad, bodega = 4020) => {
-    setLoading(true);
-    try {
-      const stockData = {
-        codigo: codigo,
-        bodega: bodega,
-        cantidad: cantidad,
-        stock: cantidad,
-      };
-      
-      await fetch('https://cl.lioren.enterprises/empresas/la-tijera-limitada/stocks', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(stockData),
-        credentials: 'include'
-      });
-      
-      alert('✅ Stock actualizado en Lioren!');
-      cargarProductos();
-    } catch (error) {
-      alert('Error actualizando stock: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const crearProducto = async (e) => {
     e.preventDefault();
     
@@ -480,16 +454,6 @@ const App = () => {
       };
       
       await fetchWordPress('/products', 'POST', productoData);
-      
-      const productoLioren = {
-        codigo: nuevoProducto.sku || `PRD-${Date.now()}`,
-        nombre: nuevoProducto.nombre,
-        descripcion: nuevoProducto.descripcion,
-        precio_neto: precioSinIva,
-        precio_bruto: precioConIva,
-        unidad: 'Unidad [ud]',
-        fraccionable: false,
-      };
       
       // Crear en Lioren (sin token, haremos un POST simple)
       try {
