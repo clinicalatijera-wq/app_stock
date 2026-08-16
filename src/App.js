@@ -322,13 +322,15 @@ const App = () => {
         }
         
         try {
+          // Asegurar que el precio sea válido
+          const precioSinIva = Math.round((prod.precio_bruto / 1.19) * 100) / 100;
+          
           const productoWP = {
             name: prod.nombre,
             type: 'simple',
-            sku: prod.codigo,
-            regular_price: Math.round((prod.precio_bruto / 1.19) * 100) / 100,
-            stock_quantity: prod.stocks ? prod.stocks[0].cantidad : 0,
-            description: `Importado desde Lioren`,
+            sku: prod.codigo || `SKU-${prod.id}`,
+            regular_price: precioSinIva,
+            stock_quantity: prod.stocks && prod.stocks[0] ? prod.stocks[0].cantidad : 0,
           };
 
           await fetchWordPress('/products', 'POST', productoWP);
