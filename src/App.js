@@ -316,6 +316,11 @@ const App = () => {
 
       // Crear productos simples
       for (const prod of productosLiboren) {
+        // FILTRO: Saltar productos de cordonería (PCS, MM)
+        if (prod.nombre.toUpperCase().includes('PCS') || prod.nombre.toUpperCase().includes('MM')) {
+          continue; // Saltar este producto
+        }
+        
         try {
           const productoWP = {
             name: prod.nombre,
